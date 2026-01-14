@@ -1,0 +1,133 @@
+import { useRoute } from "wouter";
+import { Loader2, Phone, MessageSquare, CheckCircle, MapPin } from "lucide-react";
+import { motion } from "framer-motion";
+import Map from "@/components/Map";
+import { useOrder } from "@/hooks/use-orders";
+import { useLanguage } from "@/hooks/use-language";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+
+export default function OrderTracking() {
+  const [match, params] = useRoute("/track/:id");
+  const { data: order, isLoading } = useOrder(Number(params?.id));
+  const { t } = useLanguage();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  if (!order) {
+    return <div className="p-8 text-center">Order not found</div>;
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending": return "bg-yellow-500";
+      case "accepted": return "bg-blue-500";
+      case "in_progress": return "bg-accent";
+      case "completed": return "bg-green-500";
+      default: return "bg-gray-500";
+    }
+  };
+
+  const statusText = t(`status.${order.status}`);
+
+  return (
+    <div className="h-full flex flex-col md:flex-row">
+      <div className="flex-1 relative order-2 md:order-1 h-[50vh] md:h-full">
+        <Map 
+          pickup={{ lat: order.pickupLat, lng: order.pickupLng }}
+          dropoff={{ lat: order.dropoffLat, lng: order.dropoffLng }}
+          showDrivers={order.status === 'pending'}
+          interactive={false}
+        />
+      </div>
+
+      <div className="flex flex-col md:w-[400px] order-1 md:order-2 bg-card border-l border-border h-auto md:h-full z-20">
+        <div className="p-6 md:p-8 space-y-6">
+          
+          {/* Status Header */}
+          <div className="text-center space-y-2">
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary mb-2 relative"
+            >
+              <div className={`absolute inset-0 rounded-full opacity-20 animate-ping ${getStatusColor(order.status)}`} />
+              <div className={`w-3 h-3 rounded-full ${getStatusColor(order.status)}`} />
+            </motion.div>
+            <h2 className="text-2xl font-display font-bold">{statusText}</h2>
+            <p className="text-muted-foreground text-sm">Estimated arrival: 5 mins</p>
+          </div>
+
+          <Separator />
+
+          {/* Driver Info (if accepted) */}
+          {(order.status === 'accepted' || order.status === 'in_progress') && (
+            <Card className="p-4 border border-border/50 bg-secondary/20">
+              <div className="flex items-center gap-4">
+                <Avatar className="w-12 h-12 border-2 border-background">
+                  <AvatarImage src="/images/driver-avatar.jpg" />
+                  <AvatarFallback>DR</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h4 className="font-bold">Juan Perez</h4>
+                  <p className="text-xs text-muted-foreground">Yamaha DT-125 • A123BCD</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="icon" variant="outline" className="rounded-full w-10 h-10">
+                    <MessageSquare className="w-4 h-4" />
+                  </Button>
+                  <Button size="icon" className="rounded-full w-10 h-10 bg-green-500 hover:bg-green-600 text-white border-none">
+                    <Phone className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Trip Details */}
+          <div className="space-y-6 pt-4">
+             <div className="flex gap-4">
+               <div className="flex flex-col items-center">
+                 <div className="w-2 h-2 rounded-full bg-blue-500" />
+                 <div className="w-0.5 flex-1 bg-border my-1" />
+                 <div className="w-2 h-2 rounded-full bg-accent" />
+               </div>
+               <div className="flex-1 space-y-6">
+                 <div>
+                   <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">Pickup</label>
+                   <p className="text-sm font-medium">{order.pickupAddress}</p>
+                 </div>
+                 <div>
+                   <label className="text-xs font-bold text-muted-foreground uppercase mb-1 block">Dropoff</label>
+                   <p className="text-sm font-medium">{order.dropoffAddress}</p>
+                 </div>
+               </div>
+             </div>
+          </div>
+          
+          <Separator />
+
+          <div className="flex justify-between items-center">
+             <span className="font-medium text-muted-foreground">Total</span>
+             <span className="text-xl font-display font-bold">{t("common.currency")} {order.price}</span>
+          </div>
+
+          {order.status === 'completed' && (
+             <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 p-4 rounded-xl flex items-center justify-center gap-2">
+               <CheckCircle className="w-5 h-5" />
+               <span className="font-bold">Trip Finished</span>
+             </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
