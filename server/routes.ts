@@ -69,5 +69,59 @@ export async function registerRoutes(
     res.json(drivers);
   });
 
+  // Seed Data
+  await seedDatabase();
+
   return httpServer;
+}
+
+async function seedDatabase() {
+  const { authStorage } = await import("./replit_integrations/auth/storage");
+  const drivers = await storage.getDrivers();
+  
+  if (drivers.length === 0) {
+    console.log("Seeding drivers...");
+    const driversData = [
+      {
+        id: "driver-1",
+        username: "motojuan",
+        firstName: "Juan",
+        lastName: "Perez",
+        email: "juan@motogo.com",
+        role: "driver" as const,
+        isOnline: true,
+        currentLat: 18.4861,
+        currentLng: -69.9312,
+        profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Juan"
+      },
+      {
+        id: "driver-2",
+        username: "motomaria",
+        firstName: "Maria",
+        lastName: "Rodriguez",
+        email: "maria@motogo.com",
+        role: "driver" as const,
+        isOnline: true,
+        currentLat: 18.4900,
+        currentLng: -69.9250,
+        profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria"
+      },
+      {
+        id: "driver-3",
+        username: "motopedro",
+        firstName: "Pedro",
+        lastName: "Diaz",
+        email: "pedro@motogo.com",
+        role: "driver" as const,
+        isOnline: true,
+        currentLat: 18.4800,
+        currentLng: -69.9400,
+        profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Pedro"
+      }
+    ];
+
+    for (const driver of driversData) {
+      await authStorage.upsertUser(driver);
+    }
+  }
 }
