@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useRoute } from "wouter";
 import { Loader2, Phone, MessageSquare, CheckCircle, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
@@ -22,10 +23,12 @@ export default function OrderTracking() {
       setDriverPos({ lat: order.pickupLat + 0.005, lng: order.pickupLng + 0.005 });
       
       const interval = setInterval(() => {
-        setDriverPos(prev => {
+        setDriverPos((prev: {lat: number, lng: number} | null) => {
           if (!prev) return null;
           // Slowly move towards pickup or dropoff
-          const target = order.status === 'accepted' ? order : { lat: order.dropoffLat, lng: order.dropoffLng };
+          const target = order.status === 'accepted' 
+            ? { lat: order.pickupLat, lng: order.pickupLng } 
+            : { lat: order.dropoffLat, lng: order.dropoffLng };
           return {
             lat: prev.lat + (target.lat - prev.lat) * 0.05,
             lng: prev.lng + (target.lng - prev.lng) * 0.05
