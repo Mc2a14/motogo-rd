@@ -55,7 +55,7 @@ export const api = {
       path: '/api/orders/:id',
       input: insertOrderSchema.partial().extend({
         status: z.enum(["pending", "accepted", "in_progress", "completed", "cancelled"]).optional(),
-        driverId: z.number().optional()
+        driverId: z.string().optional() // Match schema (varchar)
       }),
       responses: {
         200: z.custom<typeof orders.$inferSelect>(),
@@ -86,3 +86,7 @@ export function buildUrl(path: string, params?: Record<string, string | number>)
   }
   return url;
 }
+
+// Type exports for client-side usage
+export type CreateOrderRequest = z.infer<typeof api.orders.create.input>;
+export type UpdateOrderRequest = z.infer<typeof api.orders.update.input>;

@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { users, orders, type User, type InsertUser, type Order, type InsertOrder } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // Users (Auth handled separately, but we might need these)
@@ -10,6 +10,9 @@ export interface IStorage {
 
   // Orders
   getOrders(): Promise<Order[]>;
+  getOrdersByCustomer(customerId: string): Promise<Order[]>;
+  getOrdersByDriver(driverId: string): Promise<Order[]>;
+  getPendingOrders(): Promise<Order[]>;
   getOrder(id: number): Promise<Order | undefined>;
   createOrder(order: InsertOrder & { customerId: string }): Promise<Order>;
   updateOrder(id: number, updates: Partial<Order>): Promise<Order>;
@@ -32,6 +35,28 @@ export class DatabaseStorage implements IStorage {
 
   async getOrders(): Promise<Order[]> {
     return await db.select().from(orders).orderBy(desc(orders.createdAt));
+  }
+
+  async getOrdersByCustomer(customerId: string): Promise<Order[]> {
+    return await db.select()
+      .from(orders)
+      .where(eq(orders.customerId, customerId))
+      .orderBy(desc(orders.createdAt));
+  }
+
+  async getOrdersByDriver(driverId: string): Promise<Order[]> {
+    return await db.select()
+      .from(orders)
+      .where(eq(orders.driverId, driverId))
+      .orderBy(desc(orders.createdAt));
+  }
+
+  async getPendingOrders(): Promise<Order[]> {
+    return await db.select()
+      .from(orders)
+      // @ts-ignore - Drizzle doesn't properly type enum literals
+      .where(eq(orders.status, "pending" as any))
+      .orderBy(desc(orders.createdAt));
   }
 
   async getOrder(id: number): Promise<Order | undefined> {

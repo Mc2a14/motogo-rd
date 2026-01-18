@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, History, User, LogOut, Moon, Sun, Languages } from "lucide-react";
+import { Home, History, User, LogOut, Moon, Sun, Languages, Bike } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
@@ -15,6 +15,7 @@ export function Sidebar() {
 
   const links = [
     { href: "/", icon: Home, label: t("nav.home") },
+    ...(user?.role === "driver" ? [{ href: "/driver", icon: Bike, label: "Driver" }] : []),
     { href: "/history", icon: History, label: t("nav.history") },
     { href: "/profile", icon: User, label: t("nav.profile") },
   ];

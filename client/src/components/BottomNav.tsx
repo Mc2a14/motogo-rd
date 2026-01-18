@@ -1,14 +1,17 @@
 import { useLocation, Link } from "wouter";
-import { Home, History, User } from "lucide-react";
+import { Home, History, User, Bike } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/use-language";
+import { useAuth } from "@/hooks/use-auth";
 
 export function BottomNav() {
   const [location] = useLocation();
   const { t } = useLanguage();
+  const { user } = useAuth();
 
   const links = [
     { href: "/", icon: Home, label: t("nav.home") },
+    ...(user?.role === "driver" ? [{ href: "/driver", icon: Bike, label: "Driver" }] : []),
     { href: "/history", icon: History, label: t("nav.history") },
     { href: "/profile", icon: User, label: t("nav.profile") },
   ];

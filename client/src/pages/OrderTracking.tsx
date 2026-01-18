@@ -1,19 +1,27 @@
 import { useState, useEffect } from "react";
-import { useRoute } from "wouter";
-import { Loader2, Phone, MessageSquare, CheckCircle, MapPin } from "lucide-react";
+import { useRoute, useLocation } from "wouter";
+import { Loader2, Phone, MessageSquare, CheckCircle, MapPin, X } from "lucide-react";
 import { motion } from "framer-motion";
 import Map from "@/components/Map";
 import { useOrder } from "@/hooks/use-orders";
 import { useLanguage } from "@/hooks/use-language";
+import { useAuth } from "@/hooks/use-auth";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { api } from "@shared/routes";
 
 export default function OrderTracking() {
   const [match, params] = useRoute("/track/:id");
+  const [, setLocation] = useLocation();
   const { data: order, isLoading } = useOrder(Number(params?.id));
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Mock driver movement simulation
   const [driverPos, setDriverPos] = useState<{lat: number, lng: number} | null>(null);
@@ -62,6 +70,28 @@ export default function OrderTracking() {
   };
 
   const statusText = t(`status.${order.status}`);
+
+  const handleCancel = async () => {
+    if (!order || order.status !== "pending") return;
+    
+    try {
+      const res = await fetch(`/api/orders/${order.id}/cancel`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to cancel order");
+      
+      toast({ title: "Order Cancelled", description: "Your order has been cancelled." });
+      // Invalidate queries to refetch
+      queryClient.invalidateQueries({ queryKey: [api.orders.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.orders.get.path, order.id] });
+      setTimeout(() => setLocation("/history"), 1000);
+    } catch (error) {
+      toast({ title: "Error", description: "Could not cancel order.", variant: "destructive" });
+    }
+  };
+
+  const canCancel = order.status === "pending" && order.customerId === user?.id;
 
   return (
     <div className="h-full flex flex-col md:flex-row">
@@ -156,6 +186,17 @@ export default function OrderTracking() {
                <CheckCircle className="w-5 h-5" />
                <span className="font-bold">Trip Finished</span>
              </div>
+          )}
+
+          {canCancel && (
+            <Button 
+              variant="destructive" 
+              className="w-full h-12 rounded-xl"
+              onClick={handleCancel}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel Order
+            </Button>
           )}
         </div>
       </div>

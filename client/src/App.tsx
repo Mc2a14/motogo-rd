@@ -17,6 +17,7 @@ import Booking from "@/pages/Booking";
 import OrderTracking from "@/pages/OrderTracking";
 import History from "@/pages/History";
 import Profile from "@/pages/Profile";
+import Driver from "@/pages/Driver";
 
 function Router() {
   return (
@@ -27,6 +28,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/booking/:type" component={Booking} />
           <Route path="/track/:id" component={OrderTracking} />
+          <Route path="/driver" component={Driver} />
           <Route path="/history" component={History} />
           <Route path="/profile" component={Profile} />
           <Route component={NotFound} />
