@@ -45,18 +45,22 @@ async function buildAll() {
     ...Object.keys(pkg.devDependencies || {}),
   ];
   const externals = allDeps.filter((dep) => !allowlist.includes(dep));
+  
+  // Explicitly mark ESM-only packages as external (cannot be bundled into CJS)
+  const esmOnlyPackages = ["openid-client", "openid-client/passport"];
+  const allExternals = [...new Set([...externals, ...esmOnlyPackages])];
 
   await esbuild({
     entryPoints: ["server/index.ts"],
     platform: "node",
     bundle: true,
-    format: "cjs",
-    outfile: "dist/index.cjs",
+    format: "esm", // Changed from "cjs" to "esm" to support ESM-only dependencies
+    outfile: "dist/index.js",
     define: {
       "process.env.NODE_ENV": '"production"',
     },
     minify: true,
-    external: externals,
+    external: allExternals,
     logLevel: "info",
   });
 }
