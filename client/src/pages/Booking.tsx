@@ -37,7 +37,9 @@ export default function Booking() {
 
   // Pricing Logic (Mock)
   const basePrice = type === 'ride' ? 150 : 200;
-  const price = basePrice + 50; // Add simulated distance cost
+  const distance = 5.2; // mock km
+  const time = 15; // mock mins
+  const price = basePrice + Math.round(distance * 20); // Add simulated distance cost
 
   const handleSubmit = async () => {
     if (!user) {
@@ -47,12 +49,12 @@ export default function Booking() {
 
     try {
       const order = await createOrder.mutateAsync({
-        customerId: parseInt(user.id as string) || 1, // Fallback for demo
+        customerId: user.id as string,
         type: type as any,
-        pickupAddress: pickupAddr || "Current Location",
+        pickupAddress: pickupAddr || "Av. Winston Churchill",
         pickupLat: pickupCoords.lat,
         pickupLng: pickupCoords.lng,
-        dropoffAddress: dropoffAddr || "Selected Destination",
+        dropoffAddress: dropoffAddr || "Zona Colonial, Santo Domingo",
         dropoffLat: dropoffCoords.lat,
         dropoffLng: dropoffCoords.lng,
         price,

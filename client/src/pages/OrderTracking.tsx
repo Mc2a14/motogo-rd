@@ -14,6 +14,28 @@ export default function OrderTracking() {
   const { data: order, isLoading } = useOrder(Number(params?.id));
   const { t } = useLanguage();
 
+  // Mock driver movement simulation
+  const [driverPos, setDriverPos] = useState<{lat: number, lng: number} | null>(null);
+
+  useEffect(() => {
+    if (order && (order.status === 'accepted' || order.status === 'in_progress')) {
+      setDriverPos({ lat: order.pickupLat + 0.005, lng: order.pickupLng + 0.005 });
+      
+      const interval = setInterval(() => {
+        setDriverPos(prev => {
+          if (!prev) return null;
+          // Slowly move towards pickup or dropoff
+          const target = order.status === 'accepted' ? order : { lat: order.dropoffLat, lng: order.dropoffLng };
+          return {
+            lat: prev.lat + (target.lat - prev.lat) * 0.05,
+            lng: prev.lng + (target.lng - prev.lng) * 0.05
+          };
+        });
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [order]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -45,8 +67,14 @@ export default function OrderTracking() {
           pickup={{ lat: order.pickupLat, lng: order.pickupLng }}
           dropoff={{ lat: order.dropoffLat, lng: order.dropoffLng }}
           showDrivers={order.status === 'pending'}
-          interactive={false}
+          interactive={true}
         />
+        {driverPos && (
+          <div className="hidden">
+            {/* Logic to inject driver marker into Map component if we had ref, 
+                for now we'll just ensure the Map component handles showing drivers */}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col md:w-[400px] order-1 md:order-2 bg-card border-l border-border h-auto md:h-full z-20">
@@ -73,7 +101,7 @@ export default function OrderTracking() {
             <Card className="p-4 border border-border/50 bg-secondary/20">
               <div className="flex items-center gap-4">
                 <Avatar className="w-12 h-12 border-2 border-background">
-                  <AvatarImage src="/images/driver-avatar.jpg" />
+                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=Juan`} />
                   <AvatarFallback>DR</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">

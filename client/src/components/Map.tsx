@@ -23,9 +23,12 @@ const CENTER = { lat: 18.4861, lng: -69.9312 };
 // Driver Icon
 const createDriverIcon = (color: string) => L.divIcon({
   className: "custom-div-icon",
-  html: `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.3);"></div>`,
-  iconSize: [12, 12],
-  iconAnchor: [6, 6]
+  html: `<div class="driver-marker-container">
+    <div class="driver-marker-pulse" style="background-color: ${color}"></div>
+    <div class="driver-marker-core" style="background-color: ${color}"></div>
+  </div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12]
 });
 
 // Map controller to handle theme changes or updates
