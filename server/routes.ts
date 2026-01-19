@@ -214,6 +214,76 @@ export async function registerRoutes(
     }
   });
 
+  // Ratings
+  app.post(api.ratings.create.path, isAuthenticated, async (req, res) => {
+    try {
+      // @ts-ignore
+      const userId = req.user!.id;
+      const input = api.ratings.create.input.parse(req.body);
+      
+      // Verify the order exists and belongs to this customer
+      const order = await storage.getOrder(input.orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      if (order.customerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to rate this order" });
+      }
+      
+      if (order.status !== "completed") {
+        return res.status(400).json({ message: "Can only rate completed orders" });
+      }
+      
+      // Check if rating already exists
+      const existingRating = await storage.getRatingByOrder(input.orderId);
+      if (existingRating) {
+        return res.status(400).json({ message: "Order already rated" });
+      }
+      
+      // Verify driverId matches the order
+      if (order.driverId !== input.driverId) {
+        return res.status(400).json({ message: "Driver ID does not match order" });
+      }
+      
+      const rating = await storage.createRating({
+        orderId: input.orderId,
+        customerId: userId,
+        driverId: input.driverId,
+        rating: input.rating,
+        comment: input.comment,
+      });
+      
+      res.status(201).json(rating);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.get(api.ratings.getByOrder.path, isAuthenticated, async (req, res) => {
+    try {
+      const orderId = Number(req.params.orderId);
+      const rating = await storage.getRatingByOrder(orderId);
+      res.json(rating || null);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get(api.ratings.getByDriver.path, async (req, res) => {
+    try {
+      const driverId = req.params.driverId;
+      const driverRatings = await storage.getRatingsByDriver(driverId);
+      res.json(driverRatings);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Seed Data (non-blocking - don't crash if it fails)
   seedDatabase().catch((err) => {
     console.error("Failed to seed database:", err.message);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
-import { Loader2, Phone, MessageSquare, CheckCircle, MapPin, X } from "lucide-react";
+import { Loader2, Phone, MessageSquare, CheckCircle, MapPin, X, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import Map from "@/components/Map";
 import { useOrder } from "@/hooks/use-orders";
@@ -13,15 +13,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
+import { RatingDialog } from "@/components/RatingDialog";
+import { useRatingByOrder } from "@/hooks/use-ratings";
 
 export default function OrderTracking() {
   const [match, params] = useRoute("/track/:id");
   const [, setLocation] = useLocation();
   const { data: order, isLoading } = useOrder(Number(params?.id));
+  const { data: rating } = useRatingByOrder(Number(params?.id));
   const { t } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
 
   // Mock driver movement simulation
   const [driverPos, setDriverPos] = useState<{lat: number, lng: number} | null>(null);
@@ -197,9 +201,22 @@ export default function OrderTracking() {
               <X className="w-4 h-4 mr-2" />
               Cancel Order
             </Button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+         )}
+       </div>
+     </div>
+
+     {/* Rating Dialog */}
+     {order && order.driverId && (
+       <RatingDialog
+         open={showRatingDialog}
+         onOpenChange={setShowRatingDialog}
+         orderId={order.id}
+         driverId={order.driverId}
+         onRated={() => {
+           queryClient.invalidateQueries({ queryKey: ["ratings", "order", order.id] });
+         }}
+       />
+     )}
+   </div>
+ );
 }

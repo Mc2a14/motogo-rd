@@ -70,6 +70,24 @@ const translations: Translations = {
   "common.dark": { en: "Dark", es: "Oscuro" },
   "common.light": { en: "Light", es: "Claro" },
   "common.currency": { en: "DOP", es: "RD$" },
+  "common.error": { en: "Error", es: "Error" },
+  "common.cancel": { en: "Cancel", es: "Cancelar" },
+  
+  // Ratings
+  "rating.rate_driver": { en: "Rate Driver", es: "Calificar Conductor" },
+  "rating.rate_driver_desc": { en: "How was your experience with this driver?", es: "¿Cómo fue tu experiencia con este conductor?" },
+  "rating.select_rating": { en: "Select Rating", es: "Selecciona una Calificación" },
+  "rating.select_rating_desc": { en: "Please select a star rating", es: "Por favor selecciona una calificación" },
+  "rating.comment": { en: "Comment", es: "Comentario" },
+  "rating.optional": { en: "Optional", es: "Opcional" },
+  "rating.comment_placeholder": { en: "Share your experience...", es: "Comparte tu experiencia..." },
+  "rating.submit": { en: "Submit Rating", es: "Enviar Calificación" },
+  "rating.submitting": { en: "Submitting...", es: "Enviando..." },
+  "rating.submit_error": { en: "Failed to submit rating", es: "Error al enviar calificación" },
+  "rating.thank_you": { en: "Thank You!", es: "¡Gracias!" },
+  "rating.thank_you_desc": { en: "Your rating has been submitted", es: "Tu calificación ha sido enviada" },
+  "rating.rated": { en: "Rated", es: "Calificado" },
+  "rating.trip_finished": { en: "Trip Finished", es: "Viaje Completado" },
 };
 
 interface LanguageContextType {

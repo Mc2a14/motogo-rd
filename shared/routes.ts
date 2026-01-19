@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertOrderSchema, orders, users } from './schema';
+import { insertOrderSchema, orders, users, ratings } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -72,6 +72,37 @@ export const api = {
         200: z.array(z.custom<typeof users.$inferSelect>()),
       },
     }
+  },
+  ratings: {
+    create: {
+      method: 'POST' as const,
+      path: '/api/ratings',
+      input: z.object({
+        orderId: z.number(),
+        driverId: z.string(),
+        rating: z.number().min(1).max(5),
+        comment: z.string().optional(),
+      }),
+      responses: {
+        201: z.custom<typeof ratings.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    getByDriver: {
+      method: 'GET' as const,
+      path: '/api/ratings/driver/:driverId',
+      responses: {
+        200: z.array(z.custom<typeof ratings.$inferSelect>()),
+      },
+    },
+    getByOrder: {
+      method: 'GET' as const,
+      path: '/api/ratings/order/:orderId',
+      responses: {
+        200: z.custom<typeof ratings.$inferSelect>().nullable(),
+        404: errorSchemas.notFound,
+      },
+    },
   }
 };
 
