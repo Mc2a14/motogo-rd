@@ -27,10 +27,13 @@ async function getOpenIdClientPassport() {
 
 const getOidcConfig = memoize(
   async () => {
+    if (!process.env.REPL_ID) {
+      throw new Error("REPL_ID environment variable is required for Replit Auth");
+    }
     const openIdClient = await getOpenIdClient();
     return await openIdClient.discovery(
       new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
+      process.env.REPL_ID
     );
   },
   { maxAge: 3600 * 1000 }
@@ -79,6 +82,12 @@ async function upsertUser(claims: any) {
 }
 
 export async function setupAuth(app: Express) {
+  // Skip auth setup if REPL_ID is not set (e.g., when running on Railway without Replit Auth)
+  if (!process.env.REPL_ID) {
+    console.warn("REPL_ID not set - skipping Replit Auth setup. Auth endpoints will not work.");
+    return;
+  }
+
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
@@ -151,6 +160,14 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // If REPL_ID is not set, allow all requests (auth is disabled)
+  if (!process.env.REPL_ID) {
+    // Create a mock user for development/testing
+    // @ts-ignore
+    req.user = { claims: { sub: "dev-user" } };
+    return next();
+  }
+
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.expires_at) {
