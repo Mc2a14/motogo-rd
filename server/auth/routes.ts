@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import passport from "passport";
 import { z } from "zod";
-import { authStorage, hashPassword } from "./auth";
-import { isAuthenticated } from "./auth";
+import { hashPassword, isAuthenticated } from "./auth";
+import { authStorage } from "./storage";
 import { storage } from "../storage";
 
 const registerSchema = z.object({
