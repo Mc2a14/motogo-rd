@@ -47,6 +47,7 @@ const translations: Translations = {
   
   // Auth
   "auth.login": { en: "Log in to ride", es: "Inicia sesión para viajar" },
+  "auth.register": { en: "Sign up", es: "Registrarse" },
   "auth.welcome": { en: "Welcome back", es: "Bienvenido de nuevo" },
   
   // Common

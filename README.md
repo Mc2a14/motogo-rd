@@ -16,7 +16,7 @@ An Uber-like app for the Dominican Republic using motorcycle riders for errands,
 - **Frontend**: React 18, TypeScript, Tailwind CSS, shadcn/ui, Leaflet Maps
 - **Backend**: Express.js, Node.js
 - **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: Replit Auth (OAuth/OIDC)
+- **Authentication**: Email/Password with Passport.js (Session-based)
 - **Build**: Vite + esbuild
 
 ## 📋 Prerequisites
@@ -34,8 +34,7 @@ Create a `.env` file or set these in your deployment platform:
 DATABASE_URL=postgresql://user:password@host:port/database
 
 # Authentication
-SESSION_SECRET=your-secret-key-here
-ISSUER_URL=https://replit.com/oidc  # Default Replit Auth
+SESSION_SECRET=your-secret-key-here  # Required: Generate a random secret for session encryption
 
 # Server
 PORT=5000  # Default: 5000
@@ -131,10 +130,14 @@ Moto-Errand/
 
 ## 🔐 Authentication
 
-Uses Replit Auth by default. To use a different OAuth provider:
+The app uses email/password authentication with session-based auth:
 
-1. Update `ISSUER_URL` environment variable
-2. Configure OIDC settings in `server/replit_integrations/auth/`
+- **Register**: Users can create accounts with email and password
+- **Login**: Secure login with password hashing (bcrypt)
+- **Sessions**: Stored in PostgreSQL for persistence
+- **Roles**: Customer, Driver, or Admin (set during registration)
+
+To create a driver account, register with `role: "driver"` or update the user in the database.
 
 ## 📱 User Roles
 
@@ -160,4 +163,6 @@ MIT
 ---
 
 **Made for the Dominican Republic** 🇩🇴
+
+
 

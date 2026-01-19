@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -16,15 +16,20 @@ export async function registerRoutes(
   // Users (Me)
   app.get(api.auth.me.path, isAuthenticated, async (req, res) => {
     // @ts-ignore
-    const userId = req.user!.claims.sub;
+    const userId = req.user!.id;
     const user = await storage.getUser(userId);
-    res.json(user);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
   });
 
   // Orders
   app.get(api.orders.list.path, isAuthenticated, async (req, res) => {
     // @ts-ignore
-    const userId = req.user!.claims.sub;
+    const userId = req.user!.id;
     const userRole = (await storage.getUser(userId))?.role;
     
     // Drivers see all orders, customers see only their orders
@@ -44,8 +49,13 @@ export async function registerRoutes(
     try {
       const input = api.orders.create.input.parse(req.body);
       // @ts-ignore
-      const userId = req.user!.claims.sub;
-      const order = await storage.createOrder({ ...input, customerId: userId });
+      const userId = req.user!.id;
+      const availableDrivers = await storage.getDrivers();
+      const assignedDriver = availableDrivers.length > 0
+        ? availableDrivers[Math.floor(Math.random() * availableDrivers.length)].id
+        : null; // Assign a random driver or null if none available
+
+      const order = await storage.createOrder({ ...input, customerId: userId, driverId: assignedDriver });
       res.status(201).json(order);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -60,7 +70,7 @@ export async function registerRoutes(
   app.post("/api/orders/:id/cancel", isAuthenticated, async (req, res) => {
     try {
       // @ts-ignore
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const order = await storage.getOrder(Number(req.params.id));
       
       if (!order) {
@@ -107,7 +117,7 @@ export async function registerRoutes(
   app.put("/api/driver/location", isAuthenticated, async (req, res) => {
     try {
       // @ts-ignore
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== "driver") {
@@ -134,7 +144,7 @@ export async function registerRoutes(
   app.post("/api/orders/:id/accept", isAuthenticated, async (req, res) => {
     try {
       // @ts-ignore
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== "driver") {
@@ -164,7 +174,7 @@ export async function registerRoutes(
   app.post("/api/orders/:id/status", isAuthenticated, async (req, res) => {
     try {
       // @ts-ignore
-      const userId = req.user!.claims.sub;
+      const userId = req.user!.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== "driver") {
@@ -202,7 +212,7 @@ export async function registerRoutes(
 }
 
 async function seedDatabase() {
-  const { authStorage } = await import("./replit_integrations/auth/storage");
+  const { authStorage } = await import("./auth/storage");
   const drivers = await storage.getDrivers();
   
   if (drivers.length === 0) {

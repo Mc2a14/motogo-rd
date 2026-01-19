@@ -18,6 +18,7 @@ import OrderTracking from "@/pages/OrderTracking";
 import History from "@/pages/History";
 import Profile from "@/pages/Profile";
 import Driver from "@/pages/Driver";
+import Login from "@/pages/Login";
 
 function Router() {
   return (
@@ -26,6 +27,7 @@ function Router() {
       <main className="flex-1 relative h-full overflow-hidden flex flex-col pb-16 md:pb-0">
         <Switch>
           <Route path="/" component={Home} />
+          <Route path="/login" component={Login} />
           <Route path="/booking/:type" component={Booking} />
           <Route path="/track/:id" component={OrderTracking} />
           <Route path="/driver" component={Driver} />

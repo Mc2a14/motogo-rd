@@ -7,6 +7,7 @@ import { rm, readFile } from "fs/promises";
 const allowlist = [
   "@google/generative-ai",
   "axios",
+  "bcryptjs",
   "connect-pg-simple",
   "cors",
   "date-fns",
@@ -45,9 +46,6 @@ async function buildAll() {
     ...Object.keys(pkg.devDependencies || {}),
   ];
   const externals = allDeps.filter((dep) => !allowlist.includes(dep));
-  
-  // Explicitly mark ESM-only packages as external (cannot be bundled into CJS)
-  const esmOnlyPackages = ["openid-client", "openid-client/passport"];
   
   // Node.js built-in modules should always be external
   const nodeBuiltins = [

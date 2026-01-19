@@ -21,8 +21,8 @@ export default function Profile() {
            <h2 className="text-2xl font-bold">{t("auth.login")}</h2>
            <p className="text-muted-foreground max-w-xs mx-auto">Access your history and save your preferences.</p>
          </div>
-         <Button className="w-full max-w-sm h-12 rounded-xl text-lg" onClick={() => window.location.href = "/api/login"}>
-           Login with Replit
+         <Button className="w-full max-w-sm h-12 rounded-xl text-lg" onClick={() => window.location.href = "/login"}>
+           {t("auth.login")}
          </Button>
        </div>
     );
