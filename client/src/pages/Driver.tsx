@@ -25,9 +25,14 @@ export default function Driver() {
 
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
 
-  // Filter pending orders (only orders that are truly pending and not assigned to this driver)
+  // Filter pending orders: only show orders that are:
+  // 1. Status is "pending"
+  // 2. Not assigned to any driver (driverId is null/undefined) - unassigned orders only
+  // Note: Orders assigned to other drivers should not show here (they're already taken)
+  // Orders assigned to this driver would show as "activeOrder" instead
   const pendingOrders = orders?.filter(o => 
-    o.status === "pending" && o.driverId !== user?.id
+    o.status === "pending" && 
+    !o.driverId // Only show unassigned pending orders
   ) || [];
   
   // Active order: only orders assigned to this driver that are not completed or cancelled

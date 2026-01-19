@@ -62,12 +62,9 @@ export async function registerRoutes(
       const input = api.orders.create.input.parse(req.body);
       // @ts-ignore
       const userId = req.user!.id;
-      const availableDrivers = await storage.getDrivers();
-      const assignedDriver = availableDrivers.length > 0
-        ? availableDrivers[Math.floor(Math.random() * availableDrivers.length)].id
-        : null; // Assign a random driver or null if none available
-
-      const order = await storage.createOrder({ ...input, customerId: userId, driverId: assignedDriver });
+      // Don't auto-assign driver - let drivers accept orders manually
+      // This ensures orders are only shown to drivers when they're truly available
+      const order = await storage.createOrder({ ...input, customerId: userId, driverId: null });
       res.status(201).json(order);
     } catch (err) {
       if (err instanceof z.ZodError) {
