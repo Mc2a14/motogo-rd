@@ -1,5 +1,5 @@
 // Startup script that runs migrations and then starts the server
-const { execSync } = require("child_process");
+import { execSync } from "child_process";
 
 console.log("🚀 Starting MotoGo RD...");
 
