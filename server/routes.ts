@@ -217,59 +217,73 @@ export async function registerRoutes(
     }
   });
 
-  // Seed Data
-  await seedDatabase();
+  // Seed Data (non-blocking - don't crash if it fails)
+  seedDatabase().catch((err) => {
+    console.error("Failed to seed database:", err.message);
+    // Continue anyway - app can still run without seed data
+  });
 
   return httpServer;
 }
 
 async function seedDatabase() {
-  const { authStorage } = await import("./auth/storage");
-  const drivers = await storage.getDrivers();
-  
-  if (drivers.length === 0) {
-    console.log("Seeding drivers...");
-    const driversData = [
-      {
-        id: "driver-1",
-        username: "motojuan",
-        firstName: "Juan",
-        lastName: "Perez",
-        email: "juan@motogo.com",
-        role: "driver" as const,
-        isOnline: true,
-        currentLat: 18.4861,
-        currentLng: -69.9312,
-        profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Juan"
-      },
-      {
-        id: "driver-2",
-        username: "motomaria",
-        firstName: "Maria",
-        lastName: "Rodriguez",
-        email: "maria@motogo.com",
-        role: "driver" as const,
-        isOnline: true,
-        currentLat: 18.4900,
-        currentLng: -69.9250,
-        profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria"
-      },
-      {
-        id: "driver-3",
-        username: "motopedro",
-        firstName: "Pedro",
-        lastName: "Diaz",
-        email: "pedro@motogo.com",
-        role: "driver" as const,
-        isOnline: true,
-        currentLat: 18.4800,
-        currentLng: -69.9400,
-        profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Pedro"
-      }
-    ];
+  try {
+    const { authStorage } = await import("./auth/storage");
+    const { hashPassword } = await import("./auth/auth");
+    const drivers = await storage.getDrivers();
+    
+    if (drivers.length === 0) {
+      console.log("Seeding drivers...");
+      const defaultPassword = await hashPassword("password123");
+      const driversData = [
+        {
+          id: "driver-1",
+          username: "motojuan",
+          firstName: "Juan",
+          lastName: "Perez",
+          email: "juan@motogo.com",
+          password: defaultPassword,
+          role: "driver" as const,
+          isOnline: true,
+          currentLat: 18.4861,
+          currentLng: -69.9312,
+          profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Juan"
+        },
+        {
+          id: "driver-2",
+          username: "motomaria",
+          firstName: "Maria",
+          lastName: "Rodriguez",
+          email: "maria@motogo.com",
+          password: defaultPassword,
+          role: "driver" as const,
+          isOnline: true,
+          currentLat: 18.4900,
+          currentLng: -69.9250,
+          profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria"
+        },
+        {
+          id: "driver-3",
+          username: "motopedro",
+          firstName: "Pedro",
+          lastName: "Diaz",
+          email: "pedro@motogo.com",
+          password: defaultPassword,
+          role: "driver" as const,
+          isOnline: true,
+          currentLat: 18.4800,
+          currentLng: -69.9400,
+          profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Pedro"
+        }
+      ];
 
-    for (const driver of driversData) {
-      await authStorage.upsertUser(driver);
+      for (const driver of driversData) {
+        await authStorage.upsertUser(driver);
+      }
+      console.log("Driver seeding complete.");
     }
+  } catch (err: any) {
+    console.error("Error seeding database:", err.message);
+    throw err; // Re-throw so caller can handle
   }
 }
