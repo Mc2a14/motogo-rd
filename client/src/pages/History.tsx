@@ -17,6 +17,15 @@ export default function History() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const [ratingOrderId, setRatingOrderId] = useState<number | null>(null);
+  
+  // Filter orders based on user role
+  const filteredOrders = orders?.filter(order => {
+    if (user?.role === "driver") {
+      return order.driverId === user?.id && order.status === "completed";
+    } else {
+      return order.customerId === user?.id;
+    }
+  }) || [];
 
   if (isLoading) {
     return <div className="p-8 text-center text-muted-foreground">Loading history...</div>;
@@ -28,7 +37,7 @@ export default function History() {
         <h1 className="text-3xl font-display font-bold mb-8">{t("nav.history")}</h1>
         
         <div className="space-y-4">
-          {orders?.length === 0 ? (
+          {filteredOrders.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
               <p>No orders yet.</p>
               <Button variant="link" asChild className="mt-2 text-accent">
@@ -36,7 +45,7 @@ export default function History() {
               </Button>
             </div>
           ) : (
-            orders?.map((order) => {
+            filteredOrders.map((order) => {
               const canRate = order.status === 'completed' && 
                              order.driverId && 
                              order.customerId === user?.id;
@@ -45,6 +54,7 @@ export default function History() {
                   key={order.id}
                   order={order}
                   canRate={canRate}
+                  showRating={user?.role === "driver" && order.status === "completed"}
                   onRateClick={() => setRatingOrderId(order.id)}
                 />
               );
@@ -77,10 +87,12 @@ export default function History() {
 function OrderCard({ 
   order, 
   canRate, 
+  showRating,
   onRateClick 
 }: { 
   order: any; 
   canRate: boolean; 
+  showRating?: boolean;
   onRateClick: () => void;
 }) {
   const { t } = useLanguage();
@@ -112,13 +124,13 @@ function OrderCard({
            </div>
         </div>
 
-        <div className="flex items-center justify-between md:justify-end gap-4">
+          <div className="flex items-center justify-between md:justify-end gap-4">
           <span className="font-display font-bold text-lg">
             {t("common.currency")} {order.price}
           </span>
           
           <div className="flex items-center gap-3">
-            {/* Rating Display/Button */}
+            {/* Rating Display/Button for Customer */}
             {canRate && (
               <div className="flex items-center gap-2">
                 {rating ? (
@@ -150,6 +162,37 @@ function OrderCard({
                     <Star className="w-3 h-3" />
                     {t("rating.rate_driver")}
                   </Button>
+                )}
+              </div>
+            )}
+            
+            {/* Rating Display for Driver */}
+            {showRating && (
+              <div className="flex items-center gap-2">
+                {rating ? (
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                      <div className="flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`w-3 h-3 ${
+                              star <= rating.rating
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    {rating.comment && (
+                      <p className="text-xs text-muted-foreground italic max-w-[150px] truncate">
+                        "{rating.comment}"
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">No rating yet</span>
                 )}
               </div>
             )}

@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
+import { useCreateRating } from "@/hooks/use-ratings";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface RatingDialogProps {
   open: boolean;
@@ -32,9 +34,10 @@ export function RatingDialog({
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { t } = useLanguage();
+  const createRating = useCreateRating();
+  const queryClient = useQueryClient();
 
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -46,24 +49,20 @@ export function RatingDialog({
       return;
     }
 
-    setIsSubmitting(true);
     try {
-      const res = await fetch("/api/ratings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          orderId,
-          driverId,
-          rating,
-          comment: comment.trim() || undefined,
-        }),
+      await createRating.mutateAsync({
+        orderId,
+        driverId,
+        rating,
+        comment: comment.trim() || undefined,
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to submit rating");
-      }
+      // Invalidate rating queries to refresh UI immediately
+      queryClient.invalidateQueries({ queryKey: ["ratings", "order", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["ratings", "driver", driverId] });
+      
+      // Also invalidate orders list to refresh history if needed
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
 
       toast({
         title: t("rating.thank_you"),
@@ -81,8 +80,6 @@ export function RatingDialog({
         description: error.message || t("rating.submit_error"),
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -149,9 +146,9 @@ export function RatingDialog({
           <Button
             onClick={handleSubmit}
             className="flex-1"
-            disabled={isSubmitting || rating === 0}
+            disabled={createRating.isPending || rating === 0}
           >
-            {isSubmitting ? t("rating.submitting") : t("rating.submit")}
+            {createRating.isPending ? t("rating.submitting") : t("rating.submit")}
           </Button>
         </div>
       </DialogContent>
