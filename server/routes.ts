@@ -13,8 +13,20 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
-  // Users (Me)
-  app.get(api.auth.me.path, isAuthenticated, async (req, res) => {
+  // Users (Me) - support both /api/user and /api/auth/user for compatibility
+  app.get("/api/user", isAuthenticated, async (req, res) => {
+    // @ts-ignore
+    const userId = req.user!.id;
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
+  });
+  
+  app.get("/api/auth/user", isAuthenticated, async (req, res) => {
     // @ts-ignore
     const userId = req.user!.id;
     const user = await storage.getUser(userId);

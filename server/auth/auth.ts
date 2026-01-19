@@ -9,15 +9,44 @@ import type { User } from "@shared/models/auth";
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL must be set for session storage");
+  }
+
+  if (!process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET must be set for session security");
+  }
+
   const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
+  
+  // Configure connection with SSL for Railway
+  const connectionConfig: any = {
+    connectionString: process.env.DATABASE_URL,
+    createTableIfMissing: true, // Auto-create sessions table if missing
     ttl: sessionTtl,
     tableName: "sessions",
+  };
+
+  // Add SSL for Railway PostgreSQL
+  if (process.env.NODE_ENV === "production") {
+    const dbUrl = process.env.DATABASE_URL || "";
+    if (!dbUrl.includes("sslmode=")) {
+      connectionConfig.ssl = {
+        rejectUnauthorized: false,
+      };
+    }
+  }
+
+  const sessionStore = new pgStore(connectionConfig);
+
+  // Handle store errors gracefully
+  sessionStore.on("error", (err: Error) => {
+    console.error("Session store error:", err.message);
   });
+
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
