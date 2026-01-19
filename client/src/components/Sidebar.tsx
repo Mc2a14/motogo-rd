@@ -17,7 +17,11 @@ export function Sidebar() {
     { href: "/", icon: Home, label: t("nav.home") },
     ...(user?.role === "driver" ? [{ href: "/driver", icon: Bike, label: "Driver" }] : []),
     { href: "/history", icon: History, label: t("nav.history") },
-    { href: "/profile", icon: User, label: t("nav.profile") },
+    { 
+      href: user ? "/profile" : "/login", 
+      icon: User, 
+      label: user ? t("nav.profile") : t("nav.login") 
+    },
   ];
 
   return (
@@ -77,24 +81,38 @@ export function Sidebar() {
         </div>
 
         {/* User Profile */}
-        <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-xl mt-4">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-             {/* If user has image, we could use it here */}
-             <User className="w-5 h-5 text-primary" />
+        {user ? (
+          <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-xl mt-4">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+               {/* If user has image, we could use it here */}
+               <User className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate">{user?.firstName || 'User'}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              onClick={() => logout()}
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate">{user?.firstName || 'User'}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-            onClick={() => logout()}
-          >
-            <LogOut className="w-4 h-4" />
-          </Button>
-        </div>
+        ) : (
+          <Link href="/login">
+            <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-xl mt-4 hover:bg-secondary transition-colors cursor-pointer">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                <User className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm">{t("nav.login")}</p>
+                <p className="text-xs text-muted-foreground">{t("auth.login")}</p>
+              </div>
+            </div>
+          </Link>
+        )}
       </div>
     </aside>
   );

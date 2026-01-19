@@ -13,7 +13,11 @@ export function BottomNav() {
     { href: "/", icon: Home, label: t("nav.home") },
     ...(user?.role === "driver" ? [{ href: "/driver", icon: Bike, label: "Driver" }] : []),
     { href: "/history", icon: History, label: t("nav.history") },
-    { href: "/profile", icon: User, label: t("nav.profile") },
+    { 
+      href: user ? "/profile" : "/login", 
+      icon: User, 
+      label: user ? t("nav.profile") : t("nav.login") 
+    },
   ];
 
   return (

@@ -14,6 +14,7 @@ const translations: Translations = {
   "nav.home": { en: "Home", es: "Inicio" },
   "nav.history": { en: "History", es: "Historial" },
   "nav.profile": { en: "Profile", es: "Perfil" },
+  "nav.login": { en: "Login", es: "Iniciar Sesión" },
   "nav.logout": { en: "Logout", es: "Cerrar sesión" },
   
   // Home
