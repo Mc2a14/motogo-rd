@@ -25,10 +25,16 @@ export default function Driver() {
 
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
 
-  // Filter pending orders
-  const pendingOrders = orders?.filter(o => o.status === "pending") || [];
+  // Filter pending orders (only orders that are truly pending and not assigned to this driver)
+  const pendingOrders = orders?.filter(o => 
+    o.status === "pending" && o.driverId !== user?.id
+  ) || [];
+  
+  // Active order: only orders assigned to this driver that are not completed or cancelled
   const activeOrder = orders?.find(o => 
     o.driverId === user?.id && 
+    o.status !== "completed" &&
+    o.status !== "cancelled" &&
     (o.status === "accepted" || o.status === "in_progress")
   );
 
@@ -39,19 +45,25 @@ export default function Driver() {
     const interval = setInterval(() => {
       // This would use geolocation API in production
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((position) => {
-          fetch("/api/driver/location", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            }),
-          }).catch(() => {
-            // Silently fail if update doesn't work
-          });
-        });
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            fetch("/api/driver/location", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              }),
+            }).catch(() => {
+              // Silently fail if update doesn't work
+            });
+          },
+          (error) => {
+            // Silently handle geolocation errors (permission denied, etc.)
+            // This is expected in some browsers/environments
+          }
+        );
       }
     }, 30000); // Update every 30 seconds
 
@@ -93,13 +105,31 @@ export default function Driver() {
         credentials: "include",
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("Failed to update status");
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Failed to update status" }));
+        throw new Error(errorData.message || "Failed to update status");
+      }
+      
+      // Invalidate queries to refresh the order list and specific order
+      queryClient.invalidateQueries({ queryKey: [api.orders.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.orders.get.path, orderId] });
+      
       toast({ 
         title: status === "in_progress" ? "Trip Started" : "Trip Completed",
         description: `Order status updated to ${status === "in_progress" ? "in progress" : "completed"}.`
       });
-    } catch (error) {
-      toast({ title: "Error", description: "Could not update status.", variant: "destructive" });
+      
+      // If completed, redirect to history after a short delay
+      if (status === "completed") {
+        setTimeout(() => setLocation("/history"), 1500);
+      }
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Could not update status.", 
+        variant: "destructive" 
+      });
     }
   };
 

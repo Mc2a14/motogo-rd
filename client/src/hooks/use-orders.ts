@@ -10,6 +10,7 @@ export function useOrders() {
       if (!res.ok) throw new Error("Failed to fetch orders");
       return api.orders.list.responses[200].parse(await res.json());
     },
+    refetchInterval: 5000, // Refetch every 5 seconds to get latest orders
   });
 }
 
