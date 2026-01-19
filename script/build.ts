@@ -48,14 +48,23 @@ async function buildAll() {
   
   // Explicitly mark ESM-only packages as external (cannot be bundled into CJS)
   const esmOnlyPackages = ["openid-client", "openid-client/passport"];
-  const allExternals = [...new Set([...externals, ...esmOnlyPackages])];
+  
+  // Node.js built-in modules should always be external
+  const nodeBuiltins = [
+    "path", "fs", "http", "https", "url", "util", "crypto", "stream",
+    "events", "buffer", "querystring", "os", "net", "tls", "zlib",
+    "child_process", "cluster", "dgram", "dns", "readline", "repl",
+    "string_decoder", "timers", "tty", "vm", "worker_threads"
+  ];
+  
+  const allExternals = [...new Set([...externals, ...esmOnlyPackages, ...nodeBuiltins])];
 
   await esbuild({
     entryPoints: ["server/index.ts"],
     platform: "node",
     bundle: true,
-    format: "esm", // Changed from "cjs" to "esm" to support ESM-only dependencies
-    outfile: "dist/index.js",
+    format: "cjs", // Back to CJS - we'll use dynamic imports for ESM packages
+    outfile: "dist/index.cjs",
     define: {
       "process.env.NODE_ENV": '"production"',
     },

@@ -1,6 +1,3 @@
-import * as client from "openid-client";
-import { Strategy, type VerifyFunction } from "openid-client/passport";
-
 import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
@@ -8,9 +5,30 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
 
+// Dynamic import for ESM-only package
+let client: typeof import("openid-client");
+let Strategy: typeof import("openid-client/passport").Strategy;
+type VerifyFunction = import("openid-client/passport").VerifyFunction;
+
+async function getOpenIdClient() {
+  if (!client) {
+    client = await import("openid-client");
+  }
+  return client;
+}
+
+async function getOpenIdClientPassport() {
+  if (!Strategy) {
+    const passportModule = await import("openid-client/passport");
+    Strategy = passportModule.Strategy;
+  }
+  return { Strategy };
+}
+
 const getOidcConfig = memoize(
   async () => {
-    return await client.discovery(
+    const openIdClient = await getOpenIdClient();
+    return await openIdClient.discovery(
       new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
       process.env.REPL_ID!
     );
@@ -42,7 +60,7 @@ export function getSession() {
 
 function updateUserSession(
   user: any,
-  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
+  tokens: any // TokenEndpointResponse & TokenEndpointResponseHelpers from openid-client
 ) {
   user.claims = tokens.claims();
   user.access_token = tokens.access_token;
@@ -66,10 +84,12 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  const openIdClient = await getOpenIdClient();
+  const { Strategy: StrategyClass } = await getOpenIdClientPassport();
   const config = await getOidcConfig();
 
   const verify: VerifyFunction = async (
-    tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
+    tokens: any,
     verified: passport.AuthenticateCallback
   ) => {
     const user = {};
@@ -85,7 +105,7 @@ export async function setupAuth(app: Express) {
   const ensureStrategy = (domain: string) => {
     const strategyName = `replitauth:${domain}`;
     if (!registeredStrategies.has(strategyName)) {
-      const strategy = new Strategy(
+      const strategy = new StrategyClass(
         {
           name: strategyName,
           config,
@@ -121,7 +141,7 @@ export async function setupAuth(app: Express) {
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
       res.redirect(
-        client.buildEndSessionUrl(config, {
+        openIdClient.buildEndSessionUrl(config, {
           client_id: process.env.REPL_ID!,
           post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
         }).href
@@ -149,8 +169,9 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 
   try {
+    const openIdClient = await getOpenIdClient();
     const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
+    const tokenResponse = await openIdClient.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
     return next();
   } catch (error) {
