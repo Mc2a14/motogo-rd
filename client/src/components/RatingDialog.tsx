@@ -139,7 +139,7 @@ export function RatingDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="flex-1"
-            disabled={isSubmitting}
+            disabled={createRating.isPending}
           >
             {t("common.cancel")}
           </Button>
