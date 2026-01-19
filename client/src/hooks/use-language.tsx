@@ -54,13 +54,11 @@ const translations: Translations = {
   "auth.login": { en: "Log in to ride", es: "Inicia sesión para viajar" },
   "auth.register": { en: "Sign up", es: "Registrarse" },
   "auth.welcome": { en: "Welcome back", es: "Bienvenido de nuevo" },
-  "auth.role": { en: "I want to", es: "Quiero" },
-  "auth.select_role": { en: "Select your role", es: "Selecciona tu rol" },
-  "auth.role_customer": { en: "Book rides", es: "Solicitar viajes" },
-  "auth.role_customer_desc": { en: "Customer", es: "Cliente" },
-  "auth.role_driver": { en: "Drive & earn", es: "Conducir y ganar" },
-  "auth.role_driver_desc": { en: "Driver", es: "Conductor" },
-  "auth.role_hint": { en: "You can change this later in your profile", es: "Puedes cambiar esto más tarde en tu perfil" },
+  "auth.choose_role": { en: "Choose a Role", es: "Elige un Rol" },
+  "auth.role_customer": { en: "Customer", es: "Cliente" },
+  "auth.role_customer_desc": { en: "Book rides & services", es: "Solicitar viajes y servicios" },
+  "auth.role_driver": { en: "Driver", es: "Conductor" },
+  "auth.role_driver_desc": { en: "Drive & earn money", es: "Conducir y ganar dinero" },
   
   // Common
   "common.back": { en: "Back", es: "Atrás" },

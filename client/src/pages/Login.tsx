@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -86,6 +85,46 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <>
+              {/* Role Selection - First and Most Prominent */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">{t("auth.choose_role")}</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: "customer" })}
+                    className={`
+                      p-4 rounded-xl border-2 transition-all text-left
+                      ${formData.role === "customer"
+                        ? "border-accent bg-accent/10 shadow-lg shadow-accent/25"
+                        : "border-border bg-secondary/50 hover:border-accent/50 hover:bg-secondary"
+                      }
+                    `}
+                  >
+                    <div className="space-y-1">
+                      <div className="font-semibold text-lg">{t("auth.role_customer")}</div>
+                      <div className="text-xs text-muted-foreground">{t("auth.role_customer_desc")}</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: "driver" })}
+                    className={`
+                      p-4 rounded-xl border-2 transition-all text-left
+                      ${formData.role === "driver"
+                        ? "border-accent bg-accent/10 shadow-lg shadow-accent/25"
+                        : "border-border bg-secondary/50 hover:border-accent/50 hover:bg-secondary"
+                      }
+                    `}
+                  >
+                    <div className="space-y-1">
+                      <div className="font-semibold text-lg">{t("auth.role_driver")}</div>
+                      <div className="text-xs text-muted-foreground">{t("auth.role_driver_desc")}</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Personal Information */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
@@ -120,30 +159,6 @@ export default function Login() {
                     setFormData({ ...formData, username: e.target.value })
                   }
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">{t("auth.role")}</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, role: value as "customer" | "driver" })
-                  }
-                >
-                  <SelectTrigger id="role" className="w-full">
-                    <SelectValue placeholder={t("auth.select_role")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="customer">
-                      {t("auth.role_customer")} - {t("auth.role_customer_desc")}
-                    </SelectItem>
-                    <SelectItem value="driver">
-                      {t("auth.role_driver")} - {t("auth.role_driver_desc")}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  {t("auth.role_hint")}
-                </p>
               </div>
             </>
           )}
