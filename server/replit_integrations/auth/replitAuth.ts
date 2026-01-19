@@ -9,6 +9,8 @@ import { authStorage } from "./storage";
 let client: typeof import("openid-client");
 let Strategy: typeof import("openid-client/passport").Strategy;
 type VerifyFunction = import("openid-client/passport").VerifyFunction;
+type TokenEndpointResponse = import("openid-client").TokenEndpointResponse;
+type TokenEndpointResponseHelpers = import("openid-client").TokenEndpointResponseHelpers;
 
 async function getOpenIdClient() {
   if (!client) {
@@ -25,19 +27,27 @@ async function getOpenIdClientPassport() {
   return { Strategy };
 }
 
-const getOidcConfig = memoize(
-  async () => {
-    if (!process.env.REPL_ID) {
-      throw new Error("REPL_ID environment variable is required for Replit Auth");
-    }
-    const openIdClient = await getOpenIdClient();
-    return await openIdClient.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID
+// Only create memoized function if REPL_ID is set
+let getOidcConfig: (() => Promise<any>) | null = null;
+
+function initializeOidcConfig() {
+  if (!process.env.REPL_ID) {
+    return null;
+  }
+  
+  if (!getOidcConfig) {
+    getOidcConfig = memoize(
+      async () => {
+        const openIdClient = await getOpenIdClient();
+        return await openIdClient.Issuer.discover(
+          process.env.ISSUER_URL ?? "https://replit.com/oidc"
+        );
+      },
+      { maxAge: 3600 * 1000 }
     );
-  },
-  { maxAge: 3600 * 1000 }
-);
+  }
+  return getOidcConfig;
+}
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -63,7 +73,7 @@ export function getSession() {
 
 function updateUserSession(
   user: any,
-  tokens: any // TokenEndpointResponse & TokenEndpointResponseHelpers from openid-client
+  tokens: TokenEndpointResponse & TokenEndpointResponseHelpers
 ) {
   user.claims = tokens.claims();
   user.access_token = tokens.access_token;
@@ -88,6 +98,12 @@ export async function setupAuth(app: Express) {
     return;
   }
 
+  const oidcConfigFn = initializeOidcConfig();
+  if (!oidcConfigFn) {
+    console.warn("REPL_ID not set - skipping Replit Auth setup. Auth endpoints will not work.");
+    return;
+  }
+
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
@@ -95,10 +111,10 @@ export async function setupAuth(app: Express) {
 
   const openIdClient = await getOpenIdClient();
   const { Strategy: StrategyClass } = await getOpenIdClientPassport();
-  const config = await getOidcConfig();
+  const issuer = await oidcConfigFn();
 
   const verify: VerifyFunction = async (
-    tokens: any,
+    tokens: TokenEndpointResponse & TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
     const user = {};
@@ -117,9 +133,17 @@ export async function setupAuth(app: Express) {
       const strategy = new StrategyClass(
         {
           name: strategyName,
-          config,
-          scope: "openid email profile offline_access",
-          callbackURL: `https://${domain}/api/callback`,
+          client: new openIdClient.Client({
+            client_id: process.env.REPL_ID!,
+            client_secret: process.env.REPL_APP_SECRET,
+            redirect_uris: [`https://${domain}/api/callback`],
+            response_types: ["code"],
+          }),
+          issuer: issuer,
+          params: {
+            scope: "openid email profile offline_access",
+          },
+          passReqToCallback: false,
         },
         verify
       );
@@ -147,24 +171,33 @@ export async function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.get("/api/logout", (req, res) => {
+  app.get("/api/logout", async (req, res) => {
     req.logout(() => {
-      res.redirect(
-        openIdClient.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-        }).href
-      );
+      const endSessionUrl = issuer.endSessionUrl({
+        client_id: process.env.REPL_ID!,
+        post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
+      });
+      res.redirect(endSessionUrl);
     });
   });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  // If REPL_ID is not set, allow all requests (auth is disabled)
+  // If REPL_ID is not set, allow all requests with a mock user (auth is disabled)
   if (!process.env.REPL_ID) {
     // Create a mock user for development/testing
     // @ts-ignore
-    req.user = { claims: { sub: "dev-user" } };
+    req.user = {
+      claims: {
+        sub: "mock-user",
+        email: "mock@example.com",
+        first_name: "Mock",
+        last_name: "User",
+        profile_image_url: "",
+      },
+      id: "mock-user",
+      role: "customer", // Default role for mock user
+    };
     return next();
   }
 
@@ -187,9 +220,20 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
   try {
     const openIdClient = await getOpenIdClient();
-    const config = await getOidcConfig();
-    const tokenResponse = await openIdClient.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
+    const oidcConfigFn = initializeOidcConfig();
+    if (!oidcConfigFn) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const issuer = await oidcConfigFn();
+    const client = new openIdClient.Client({
+      client_id: process.env.REPL_ID!,
+      client_secret: process.env.REPL_APP_SECRET,
+      redirect_uris: [],
+      response_types: ["code"],
+    });
+    const tokenSet = await client.refresh(refreshToken);
+    updateUserSession(user, tokenSet);
     return next();
   } catch (error) {
     res.status(401).json({ message: "Unauthorized" });
