@@ -20,6 +20,10 @@ const translations: Translations = {
   // Home
   "home.greeting": { en: "Where to?", es: "¿A dónde vas?" },
   "home.search_placeholder": { en: "Enter destination", es: "Ingresa destino" },
+  "home.driver_welcome": { en: "Welcome, Driver!", es: "¡Bienvenido, Conductor!" },
+  "home.driver_description": { en: "Manage your rides and accept new orders from the dashboard", es: "Gestiona tus viajes y acepta nuevas órdenes desde el panel" },
+  "home.go_to_dashboard": { en: "Go to Driver Dashboard", es: "Ir al Panel de Conductor" },
+  "home.driver_hint": { en: "You'll see pending orders and can accept them to start earning", es: "Verás órdenes pendientes y podrás aceptarlas para comenzar a ganar" },
   
   // Services
   "service.ride": { en: "Moto Ride", es: "Motoconcho" },
@@ -50,6 +54,13 @@ const translations: Translations = {
   "auth.login": { en: "Log in to ride", es: "Inicia sesión para viajar" },
   "auth.register": { en: "Sign up", es: "Registrarse" },
   "auth.welcome": { en: "Welcome back", es: "Bienvenido de nuevo" },
+  "auth.role": { en: "I want to", es: "Quiero" },
+  "auth.select_role": { en: "Select your role", es: "Selecciona tu rol" },
+  "auth.role_customer": { en: "Book rides", es: "Solicitar viajes" },
+  "auth.role_customer_desc": { en: "Customer", es: "Cliente" },
+  "auth.role_driver": { en: "Drive & earn", es: "Conducir y ganar" },
+  "auth.role_driver_desc": { en: "Driver", es: "Conductor" },
+  "auth.role_hint": { en: "You can change this later in your profile", es: "Puedes cambiar esto más tarde en tu perfil" },
   
   // Common
   "common.back": { en: "Back", es: "Atrás" },

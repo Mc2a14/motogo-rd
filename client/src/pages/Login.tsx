@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -22,6 +23,7 @@ export default function Login() {
     firstName: "",
     lastName: "",
     username: "",
+    role: "customer" as "customer" | "driver",
   });
 
   // Redirect if already authenticated
@@ -118,6 +120,30 @@ export default function Login() {
                     setFormData({ ...formData, username: e.target.value })
                   }
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">{t("auth.role")}</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, role: value as "customer" | "driver" })
+                  }
+                >
+                  <SelectTrigger id="role" className="w-full">
+                    <SelectValue placeholder={t("auth.select_role")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="customer">
+                      {t("auth.role_customer")} - {t("auth.role_customer_desc")}
+                    </SelectItem>
+                    <SelectItem value="driver">
+                      {t("auth.role_driver")} - {t("auth.role_driver_desc")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t("auth.role_hint")}
+                </p>
               </div>
             </>
           )}
