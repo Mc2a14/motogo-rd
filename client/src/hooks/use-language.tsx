@@ -62,6 +62,8 @@ const translations: Translations = {
   
   // Common
   "common.back": { en: "Back", es: "Atrás" },
+  "common.next": { en: "Next", es: "Continuar" },
+  "common.select_service": { en: "Select a service", es: "Selecciona un servicio" },
   "common.settings": { en: "Settings", es: "Configuración" },
   "common.language": { en: "Language", es: "Idioma" },
   "common.theme": { en: "Theme", es: "Tema" },

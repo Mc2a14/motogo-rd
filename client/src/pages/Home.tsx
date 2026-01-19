@@ -107,7 +107,7 @@ export default function Home() {
             disabled={!selectedService}
             onClick={handleBooking}
           >
-            {selectedService ? t("common.back") + " ->" : "Select a service"}
+            {selectedService ? t("common.next") + " ->" : t("common.select_service")}
           </Button>
         </div>
       </div>
