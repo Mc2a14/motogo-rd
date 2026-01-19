@@ -6,11 +6,13 @@ import Map from "@/components/Map";
 import { useOrders, useUpdateOrder } from "@/hooks/use-orders";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { api } from "@shared/routes";
 
 export default function Driver() {
   const [, setLocation] = useLocation();
@@ -19,6 +21,7 @@ export default function Driver() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const updateOrder = useUpdateOrder();
+  const queryClient = useQueryClient();
 
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
 
@@ -61,11 +64,24 @@ export default function Driver() {
         method: "POST",
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to accept order");
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Failed to accept order" }));
+        throw new Error(errorData.message || "Failed to accept order");
+      }
+      
+      // Invalidate queries to refresh the order list and specific order
+      queryClient.invalidateQueries({ queryKey: [api.orders.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.orders.get.path, orderId] });
+      
       toast({ title: "Order Accepted", description: "You have accepted this order." });
       setSelectedOrder(orderId);
-    } catch (error) {
-      toast({ title: "Error", description: "Could not accept order.", variant: "destructive" });
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Could not accept order.", 
+        variant: "destructive" 
+      });
     }
   };
 

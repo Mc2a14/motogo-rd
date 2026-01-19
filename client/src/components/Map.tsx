@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { useTheme } from "@/hooks/use-theme";
@@ -43,6 +43,27 @@ function MapController() {
   return null;
 }
 
+// Component to fit map bounds to show pickup and dropoff
+function FitBounds({ pickup, dropoff }: { pickup?: { lat: number; lng: number } | null; dropoff?: { lat: number; lng: number } | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (pickup && dropoff) {
+      // Create bounds to fit both points
+      const bounds = L.latLngBounds(
+        [pickup.lat, pickup.lng],
+        [dropoff.lat, dropoff.lng]
+      );
+      map.fitBounds(bounds, { padding: [50, 50] });
+    } else if (pickup) {
+      // If only pickup, center on it
+      map.setView([pickup.lat, pickup.lng], 15);
+    }
+  }, [pickup, dropoff, map]);
+
+  return null;
+}
+
 interface MapProps {
   className?: string;
   pickup?: { lat: number; lng: number } | null;
@@ -62,7 +83,24 @@ export default function Map({
 }: MapProps) {
   const { theme } = useTheme();
   const { data: drivers } = useDrivers();
-  const [center, setCenter] = useState(CENTER);
+  
+  // Calculate center based on pickup/dropoff or default to Santo Domingo
+  const calculateCenter = () => {
+    if (pickup && dropoff) {
+      // Center between pickup and dropoff
+      return {
+        lat: (pickup.lat + dropoff.lat) / 2,
+        lng: (pickup.lng + dropoff.lng) / 2
+      };
+    } else if (pickup) {
+      return pickup;
+    } else if (dropoff) {
+      return dropoff;
+    }
+    return CENTER;
+  };
+
+  const mapCenter = calculateCenter();
 
   // Dark mode map tiles vs Light mode
   const tileUrl = theme === 'dark' 
@@ -75,8 +113,8 @@ export default function Map({
     <div className={`relative ${className} z-0 overflow-hidden rounded-xl`}>
       <MapContainer 
         // @ts-ignore
-        center={[CENTER.lat, CENTER.lng]} 
-        zoom={13} 
+        center={[mapCenter.lat, mapCenter.lng]} 
+        zoom={pickup || dropoff ? 12 : 13} 
         scrollWheelZoom={interactive}
         dragging={interactive}
         zoomControl={false}
@@ -86,6 +124,7 @@ export default function Map({
         {/* @ts-ignore */}
         <TileLayer url={tileUrl} attribution={attribution} />
         <MapController />
+        <FitBounds pickup={pickup} dropoff={dropoff} />
 
         {/* Pickup Marker */}
         {pickup && (
