@@ -58,6 +58,9 @@ function FitBounds({ pickup, dropoff }: { pickup?: { lat: number; lng: number } 
     } else if (pickup) {
       // If only pickup, center on it
       map.setView([pickup.lat, pickup.lng], 15);
+    } else if (dropoff) {
+      // If only dropoff, center on it
+      map.setView([dropoff.lat, dropoff.lng], 15);
     }
   }, [pickup, dropoff, map]);
 
@@ -126,19 +129,19 @@ export default function Map({
         <MapController />
         <FitBounds pickup={pickup} dropoff={dropoff} />
 
-        {/* Pickup Marker */}
-        {pickup && (
-          <Marker position={[pickup.lat, pickup.lng]}>
-            <Popup>Pickup Location</Popup>
-          </Marker>
-        )}
+               {/* Pickup Marker */}
+               {pickup && pickup.lat && pickup.lng && (
+                 <Marker position={[pickup.lat, pickup.lng]}>
+                   <Popup>Pickup Location</Popup>
+                 </Marker>
+               )}
 
-        {/* Dropoff Marker */}
-        {dropoff && (
-          <Marker position={[dropoff.lat, dropoff.lng]}>
-            <Popup>Dropoff Location</Popup>
-          </Marker>
-        )}
+               {/* Dropoff Marker */}
+               {dropoff && dropoff.lat && dropoff.lng && (
+                 <Marker position={[dropoff.lat, dropoff.lng]}>
+                   <Popup>Dropoff Location</Popup>
+                 </Marker>
+               )}
 
         {/* Mock/Real Drivers */}
         {showDrivers && drivers?.map((driver) => (

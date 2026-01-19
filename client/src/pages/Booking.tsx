@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
-import { ArrowLeft, MapPin, Navigation, Clock, CreditCard } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, Clock, CreditCard, Loader2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import Map from "@/components/Map";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { useCreateOrder } from "@/hooks/use-orders";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
+import { getCurrentLocation, geocodeAddress, reverseGeocode } from "@/lib/geocoding";
 
 // Initial center for demo (Santo Domingo)
 const INITIAL_CENTER = { lat: 18.4861, lng: -69.9312 };
@@ -31,9 +32,108 @@ export default function Booking() {
   const [dropoffAddr, setDropoffAddr] = useState("");
   const [notes, setNotes] = useState("");
   
-  // Simulation of coordinate selection (center of map)
-  const [pickupCoords, setPickupCoords] = useState(INITIAL_CENTER);
-  const [dropoffCoords, setDropoffCoords] = useState({ lat: 18.4900, lng: -69.9400 });
+  // Coordinate states
+  const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [dropoffCoords, setDropoffCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [isGeocodingPickup, setIsGeocodingPickup] = useState(false);
+  const [isGeocodingDropoff, setIsGeocodingDropoff] = useState(false);
+
+  // Get user's current location on mount
+  useEffect(() => {
+    if (!pickupCoords && !pickupAddr) {
+      setIsLoadingLocation(true);
+      getCurrentLocation()
+        .then((coords) => {
+          setPickupCoords(coords);
+          // Reverse geocode to get address
+          reverseGeocode(coords.lat, coords.lng)
+            .then((address) => {
+              setPickupAddr(address);
+            })
+            .catch(() => {
+              // If reverse geocoding fails, use coordinates as fallback
+              setPickupAddr(`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`);
+            });
+        })
+        .catch((error) => {
+          console.error('Location error:', error);
+          // Fallback to Santo Domingo if geolocation fails
+          setPickupCoords(INITIAL_CENTER);
+          setPickupAddr("Santo Domingo, Dominican Republic");
+          toast({
+            title: "Location Access",
+            description: "Using default location. Enable location access for better accuracy.",
+            variant: "default",
+          });
+        })
+        .finally(() => {
+          setIsLoadingLocation(false);
+        });
+    } else if (pickupAddr && !pickupCoords) {
+      // If we have an address but no coordinates, geocode it
+      setIsGeocodingPickup(true);
+      geocodeAddress(pickupAddr)
+        .then((result) => {
+          setPickupCoords({ lat: result.lat, lng: result.lng });
+          setPickupAddr(result.address);
+        })
+        .catch((error) => {
+          console.error('Geocoding error:', error);
+          // Fallback to default location
+          setPickupCoords(INITIAL_CENTER);
+        })
+        .finally(() => {
+          setIsGeocodingPickup(false);
+        });
+    }
+  }, []);
+
+  // Geocode pickup address when it changes (debounced)
+  useEffect(() => {
+    if (!pickupAddr || pickupAddr === initialAddress) return;
+    
+    const timeoutId = setTimeout(() => {
+      setIsGeocodingPickup(true);
+      geocodeAddress(pickupAddr)
+        .then((result) => {
+          setPickupCoords({ lat: result.lat, lng: result.lng });
+          setPickupAddr(result.address);
+        })
+        .catch((error) => {
+          console.error('Geocoding error:', error);
+          // Don't update coordinates if geocoding fails
+        })
+        .finally(() => {
+          setIsGeocodingPickup(false);
+        });
+    }, 1000); // Wait 1 second after user stops typing
+
+    return () => clearTimeout(timeoutId);
+  }, [pickupAddr]);
+
+  // Geocode dropoff address when it changes (debounced)
+  useEffect(() => {
+    if (!dropoffAddr) return;
+    
+    const timeoutId = setTimeout(() => {
+      setIsGeocodingDropoff(true);
+      geocodeAddress(dropoffAddr)
+        .then((result) => {
+          setDropoffCoords({ lat: result.lat, lng: result.lng });
+          setDropoffAddr(result.address);
+        })
+        .catch((error) => {
+          console.error('Geocoding error:', error);
+          // Don't update coordinates if geocoding fails
+        })
+        .finally(() => {
+          setIsGeocodingDropoff(false);
+        });
+    }, 1000); // Wait 1 second after user stops typing
+
+    return () => clearTimeout(timeoutId);
+  }, [dropoffAddr]);
 
   // Pricing Logic (Mock)
   const basePrice = type === 'ride' ? 150 : 200;
@@ -47,14 +147,24 @@ export default function Booking() {
       return;
     }
 
+    if (!pickupCoords) {
+      toast({ title: "Pickup Location Required", description: "Please enter a valid pickup location.", variant: "destructive" });
+      return;
+    }
+
+    if (!dropoffCoords || !dropoffAddr) {
+      toast({ title: "Destination Required", description: "Please enter a valid destination.", variant: "destructive" });
+      return;
+    }
+
     try {
       const order = await createOrder.mutateAsync({
         customerId: user.id as string,
         type: type as any,
-        pickupAddress: pickupAddr || "Av. Winston Churchill",
+        pickupAddress: pickupAddr,
         pickupLat: pickupCoords.lat,
         pickupLng: pickupCoords.lng,
-        dropoffAddress: dropoffAddr || "Zona Colonial, Santo Domingo",
+        dropoffAddress: dropoffAddr,
         dropoffLat: dropoffCoords.lat,
         dropoffLng: dropoffCoords.lng,
         price,
@@ -74,6 +184,7 @@ export default function Booking() {
         <Map 
           pickup={pickupCoords} 
           dropoff={dropoffCoords}
+          interactive={true}
         />
         {/* Mobile Back Button */}
         <Button 
@@ -110,12 +221,50 @@ export default function Booking() {
                 <div className="mt-3 w-4 h-4 rounded-full bg-blue-500 ring-4 ring-blue-500/20 shrink-0" />
                 <div className="flex-1 space-y-1">
                   <label className="text-xs font-semibold text-muted-foreground uppercase">{t("booking.pickup")}</label>
-                  <Input 
-                    value={pickupAddr} 
-                    onChange={(e) => setPickupAddr(e.target.value)}
-                    placeholder="Enter pickup location"
-                    className="bg-secondary/30"
-                  />
+                  <div className="relative">
+                    <Input 
+                      value={pickupAddr} 
+                      onChange={(e) => setPickupAddr(e.target.value)}
+                      placeholder={isLoadingLocation ? "Getting your location..." : "Enter pickup location"}
+                      className="bg-secondary/30 pr-10"
+                      disabled={isLoadingLocation}
+                    />
+                    {(isLoadingLocation || isGeocodingPickup) && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                    )}
+                    {!isLoadingLocation && !isGeocodingPickup && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                        onClick={() => {
+                          setIsLoadingLocation(true);
+                          getCurrentLocation()
+                            .then((coords) => {
+                              setPickupCoords(coords);
+                              return reverseGeocode(coords.lat, coords.lng);
+                            })
+                            .then((address) => {
+                              setPickupAddr(address);
+                            })
+                            .catch((error) => {
+                              toast({
+                                title: "Location Error",
+                                description: error.message || "Could not get your location",
+                                variant: "destructive",
+                              });
+                            })
+                            .finally(() => {
+                              setIsLoadingLocation(false);
+                            });
+                        }}
+                        title="Use current location"
+                      >
+                        <MapPin className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -123,12 +272,17 @@ export default function Booking() {
                 <div className="mt-3 w-4 h-4 rounded-full bg-accent ring-4 ring-accent/20 shrink-0" />
                 <div className="flex-1 space-y-1">
                   <label className="text-xs font-semibold text-muted-foreground uppercase">{t("booking.dropoff")}</label>
-                  <Input 
-                    value={dropoffAddr} 
-                    onChange={(e) => setDropoffAddr(e.target.value)}
-                    placeholder="Enter destination"
-                    className="bg-secondary/30"
-                  />
+                  <div className="relative">
+                    <Input 
+                      value={dropoffAddr} 
+                      onChange={(e) => setDropoffAddr(e.target.value)}
+                      placeholder="Enter destination"
+                      className="bg-secondary/30 pr-10"
+                    />
+                    {isGeocodingDropoff && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
