@@ -55,7 +55,7 @@ async function buildAll() {
     "string_decoder", "timers", "tty", "vm", "worker_threads"
   ];
   
-  const allExternals = [...new Set([...externals, ...esmOnlyPackages, ...nodeBuiltins])];
+  const allExternals = [...new Set([...externals, ...nodeBuiltins])];
 
   await esbuild({
     entryPoints: ["server/index.ts"],
