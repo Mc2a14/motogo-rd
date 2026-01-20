@@ -135,54 +135,84 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
 export function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
+      console.error('❌ Geolocation is not supported by your browser');
       reject(new Error('Geolocation is not supported by your browser'));
       return;
     }
 
+    console.log('📍 Requesting location permission...');
+
     // Try with high accuracy first (GPS)
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        console.log('✅ Location obtained (GPS):', {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        });
         resolve({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         });
       },
       (error) => {
+        console.warn('⚠️ High-accuracy location failed, trying network-based...', {
+          code: error.code,
+          message: error.message
+        });
+        
         // If high accuracy fails, try with lower accuracy (network-based)
         // This is more likely to work in some environments
         navigator.geolocation.getCurrentPosition(
           (position) => {
+            console.log('✅ Location obtained (Network):', {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              accuracy: position.coords.accuracy
+            });
             resolve({
               lat: position.coords.latitude,
               lng: position.coords.longitude,
             });
           },
           (error) => {
-            // If both attempts fail, reject
+            // Log the actual error for debugging
             let message = 'Unable to get your location';
+            let errorType = 'UNKNOWN';
+            
             switch (error.code) {
               case error.PERMISSION_DENIED:
-                message = 'Location permission denied';
+                message = 'Location permission denied. Please enable location access in your browser settings.';
+                errorType = 'PERMISSION_DENIED';
                 break;
               case error.POSITION_UNAVAILABLE:
-                message = 'Location information unavailable';
+                message = 'Location information unavailable. Your device may not be able to determine location.';
+                errorType = 'POSITION_UNAVAILABLE';
                 break;
               case error.TIMEOUT:
-                message = 'Location request timed out';
+                message = 'Location request timed out. Please try again.';
+                errorType = 'TIMEOUT';
                 break;
             }
+            
+            console.error('❌ Location failed:', {
+              code: error.code,
+              type: errorType,
+              message: error.message
+            });
+            
             reject(new Error(message));
           },
           {
             enableHighAccuracy: false, // Try network-based location
-            timeout: 15000, // Longer timeout for network location
+            timeout: 20000, // Even longer timeout for network location
             maximumAge: 300000, // Accept location up to 5 minutes old
           }
         );
       },
       {
         enableHighAccuracy: true, // Try GPS first
-        timeout: 15000, // 15 second timeout
+        timeout: 20000, // 20 second timeout
         maximumAge: 0, // Always get fresh location
       }
     );

@@ -65,7 +65,18 @@ export default function Booking() {
               setPickupAddr(`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`);
             });
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error('❌ Failed to get current location:', error.message);
+          
+          // Show user-friendly message about location
+          if (error.message.includes('permission')) {
+            toast({
+              title: "Location Access Needed",
+              description: "Please enable location access in your browser settings to automatically detect your location.",
+              variant: "default",
+            });
+          }
+          
           // If location fails and we have initialAddress from URL, use that
           if (initialAddress) {
             setPickupAddr(initialAddress);
@@ -77,11 +88,13 @@ export default function Booking() {
               })
               .catch(() => {
                 // Final fallback to default location
+                console.warn('⚠️ Using default location (Santo Domingo) as fallback');
                 setPickupCoords(INITIAL_CENTER);
                 setPickupAddr("Santo Domingo, Dominican Republic");
               });
           } else {
             // No initial address, use default location
+            console.warn('⚠️ Using default location (Santo Domingo) as fallback');
             setPickupCoords(INITIAL_CENTER);
             setPickupAddr("Santo Domingo, Dominican Republic");
           }
