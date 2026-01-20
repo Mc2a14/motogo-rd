@@ -29,7 +29,7 @@ export interface PricingBreakdown {
 }
 
 /**
- * Calculate road distance between two coordinates using OpenRouteService API
+ * Calculate road distance between two coordinates using OSRM API
  * Falls back to Haversine formula if API fails
  * @param lat1 Latitude of first point
  * @param lng1 Longitude of first point
@@ -44,11 +44,10 @@ export async function calculateDistance(
   lng2: number
 ): Promise<number> {
   try {
-    // Use OpenRouteService Directions API (free, no API key required for basic usage)
-    // Format: [longitude, latitude] for OpenRouteService
-    const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf6248${encodeURIComponent('@')}your-api-key&start=${lng1},${lat1}&end=${lng2},${lat2}`;
+    // Use OSRM (Open Source Routing Machine) - free, no API key required
+    // Format: [longitude, latitude] for OSRM
+    const url = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?overview=false&alternatives=false`;
     
-    // Try with a public demo key first (limited requests)
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',
@@ -57,15 +56,15 @@ export async function calculateDistance(
 
     if (response.ok) {
       const data = await response.json();
-      if (data.features && data.features[0]?.properties?.segments?.[0]?.distance) {
+      if (data.routes && data.routes[0]?.distance) {
         // Distance is in meters, convert to km
-        const distanceMeters = data.features[0].properties.segments[0].distance;
+        const distanceMeters = data.routes[0].distance;
         const distanceKm = distanceMeters / 1000;
         return Math.round(distanceKm * 100) / 100; // Round to 2 decimal places
       }
     }
   } catch (error) {
-    console.warn('OpenRouteService API failed, using Haversine fallback:', error);
+    console.warn('OSRM API failed, using Haversine fallback:', error);
   }
 
   // Fallback to Haversine formula (straight-line distance)
