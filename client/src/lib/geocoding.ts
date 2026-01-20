@@ -154,10 +154,28 @@ async function getLocationByGoogle(): Promise<{ lat: number; lng: number }> {
     if (response.ok) {
       const data = await response.json();
       if (data.location && data.location.lat && data.location.lng) {
+        const accuracy = data.accuracy || Infinity; // Accuracy in meters
+        const accuracyKm = accuracy / 1000;
+        
+        console.log('📍 Google Geolocation API result:', {
+          lat: data.location.lat,
+          lng: data.location.lng,
+          accuracy: `${accuracyKm.toFixed(1)}km`,
+          accuracyMeters: accuracy
+        });
+        
+        // If accuracy is worse than 5km, it's too inaccurate to use
+        // This prevents using IP-based or very inaccurate WiFi-based locations
+        if (accuracy > 5000) {
+          console.warn('⚠️ Google Geolocation accuracy too low:', `${accuracyKm.toFixed(1)}km`);
+          console.warn('⚠️ Rejecting inaccurate location - please use map selection or manual entry');
+          throw new Error(`Location accuracy too low (${accuracyKm.toFixed(1)}km). Please select your location on the map or enter it manually.`);
+        }
+        
         console.log('✅ Location obtained (Google Geolocation API):', {
           lat: data.location.lat,
           lng: data.location.lng,
-          accuracy: data.accuracy ? `${data.accuracy}m` : 'unknown'
+          accuracy: `${accuracyKm.toFixed(1)}km`
         });
         return {
           lat: data.location.lat,
@@ -260,10 +278,16 @@ export function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
                 resolve(coords);
               })
               .catch((googleError) => {
-                console.warn('⚠️ Google Geolocation API also failed:', googleError);
-                // If Google Geolocation also fails, reject with original browser error
-                // This gives user clear message about enabling location
-                reject(new Error(message));
+                console.warn('⚠️ Google Geolocation API failed or inaccurate:', googleError);
+                // If Google Geolocation fails or is too inaccurate, reject with helpful message
+                // On laptops/desktops, browser geolocation often doesn't work, so we should
+                // guide users to use map selection or manual entry instead
+                const isLaptop = !navigator.userAgent.match(/Mobile|Android|iPhone|iPad/i);
+                if (isLaptop) {
+                  reject(new Error('Location not available on this device. Please select your location on the map or enter it manually.'));
+                } else {
+                  reject(new Error(message));
+                }
               });
           },
           {

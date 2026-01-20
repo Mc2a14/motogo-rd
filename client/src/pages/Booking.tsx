@@ -82,17 +82,24 @@ export default function Booking() {
           console.error('❌ Failed to get current location:', error.message);
           
           // Show user-friendly message about location
-          if (error.message.includes('permission')) {
+          if (error.message.includes('permission') || error.message.includes('denied')) {
             toast({
               title: "Location Permission Required",
-              description: "Click the location button (📍) to allow location access. Your browser will ask for permission.",
+              description: "Please enable location access in your browser settings. Click the lock icon (🔒) in the address bar → Site settings → Location → Allow",
+              variant: "destructive",
+              duration: 8000,
+            });
+          } else if (error.message.includes('unavailable') || error.message.includes('not available')) {
+            toast({
+              title: "Location Not Available",
+              description: "Your device can't determine location. Please select your location on the map or enter it manually.",
               variant: "default",
               duration: 5000,
             });
-          } else if (error.message.includes('unavailable')) {
+          } else if (error.message.includes('accuracy')) {
             toast({
-              title: "Location Unavailable",
-              description: "Unable to detect your location. Please click the location button (📍) or enter your address manually.",
+              title: "Location Too Inaccurate",
+              description: error.message,
               variant: "default",
               duration: 5000,
             });
