@@ -147,18 +147,21 @@ export function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
         });
       },
       (error) => {
+        // Completely silent error handling - no console logs, no error messages
+        // Location access is optional and failures are expected/common
         let message = 'Unable to get your location';
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            message = 'Location permission denied. Please enable location access in your browser settings.';
+            message = 'Location permission denied';
             break;
           case error.POSITION_UNAVAILABLE:
-            message = 'Location information unavailable.';
+            message = 'Location information unavailable';
             break;
           case error.TIMEOUT:
-            message = 'Location request timed out.';
+            message = 'Location request timed out';
             break;
         }
+        // No console logging - completely silent
         reject(new Error(message));
       },
       {

@@ -63,16 +63,11 @@ export default function Booking() {
               setPickupAddr(`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`);
             });
         })
-        .catch((error) => {
-          console.error('Location error:', error);
-          // Fallback to Santo Domingo if geolocation fails
+        .catch(() => {
+          // Completely silent fallback - no errors, no toasts, no console logs
+          // Location access is optional and failures are expected/common
           setPickupCoords(INITIAL_CENTER);
           setPickupAddr("Santo Domingo, Dominican Republic");
-          toast({
-            title: "Location Access",
-            description: "Using default location. Enable location access for better accuracy.",
-            variant: "default",
-          });
         })
         .finally(() => {
           setIsLoadingLocation(false);
@@ -329,12 +324,11 @@ export default function Booking() {
                             .then((address) => {
                               setPickupAddr(address);
                             })
-                            .catch((error) => {
-                              toast({
-                                title: "Location Error",
-                                description: error.message || "Could not get your location",
-                                variant: "destructive",
-                              });
+                            .catch(() => {
+                              // Silently fall back to default location - no error message
+                              // Location access is optional and may not be available
+                              setPickupCoords(INITIAL_CENTER);
+                              setPickupAddr("Santo Domingo, Dominican Republic");
                             })
                             .finally(() => {
                               setIsLoadingLocation(false);
