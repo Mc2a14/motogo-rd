@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { getCurrentLocation, geocodeAddress, reverseGeocode } from "@/lib/geocoding";
+import { calculatePricing, type PricingBreakdown } from "@/lib/pricing";
 
 // Initial center for demo (Santo Domingo)
 const INITIAL_CENTER = { lat: 18.4861, lng: -69.9312 };
@@ -41,6 +42,9 @@ export default function Booking() {
   
   // Map selection mode: 'pickup', 'dropoff', or null
   const [selectionMode, setSelectionMode] = useState<'pickup' | 'dropoff' | null>(null);
+  
+  // Pricing breakdown
+  const [pricing, setPricing] = useState<PricingBreakdown | null>(null);
 
   // Get user's current location on mount
   useEffect(() => {
@@ -138,11 +142,20 @@ export default function Booking() {
     return () => clearTimeout(timeoutId);
   }, [dropoffAddr]);
 
-  // Pricing Logic (Mock)
-  const basePrice = type === 'ride' ? 150 : 200;
-  const distance = 5.2; // mock km
-  const time = 15; // mock mins
-  const price = basePrice + Math.round(distance * 20); // Add simulated distance cost
+  // Calculate pricing when coordinates are available
+  useEffect(() => {
+    if (pickupCoords && dropoffCoords) {
+      const breakdown = calculatePricing(
+        pickupCoords.lat,
+        pickupCoords.lng,
+        dropoffCoords.lat,
+        dropoffCoords.lng
+      );
+      setPricing(breakdown);
+    } else {
+      setPricing(null);
+    }
+  }, [pickupCoords, dropoffCoords]);
 
   const handleSubmit = async () => {
     if (!user) {
@@ -160,6 +173,15 @@ export default function Booking() {
       return;
     }
 
+    if (!pricing) {
+      toast({ 
+        title: "Calculating Price", 
+        description: "Please wait while we calculate your fare...", 
+        variant: "default" 
+      });
+      return;
+    }
+
     try {
       const order = await createOrder.mutateAsync({
         customerId: user.id as string,
@@ -170,7 +192,7 @@ export default function Booking() {
         dropoffAddress: dropoffAddr,
         dropoffLat: dropoffCoords.lat,
         dropoffLng: dropoffCoords.lng,
-        price,
+        price: pricing.basePrice, // Store base price (what customer pays for cash)
         description: notes,
       });
       
@@ -357,23 +379,66 @@ export default function Booking() {
             </div>
 
             {/* Price Estimate Card */}
-            <Card className="p-4 bg-secondary/20 border-border/50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-muted-foreground">{t("booking.price")}</span>
-                <span className="text-2xl font-display font-bold">{t("common.currency")} {price}</span>
-              </div>
-              <div className="flex gap-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Navigation className="w-3 h-3" /> 5.2 km
+            {pricing ? (
+              <Card className="p-4 bg-secondary/20 border-border/50">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">{t("booking.price")}</span>
+                    <div className="text-right">
+                      <div className="text-2xl font-display font-bold">{t("common.currency")} {pricing.customerPaysCash}</div>
+                      <div className="text-xs text-muted-foreground">Cash payment</div>
+                    </div>
+                  </div>
+                  
+                  {/* Price Breakdown */}
+                  <div className="space-y-1 text-xs border-t border-border/50 pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Base fare</span>
+                      <span>{t("common.currency")} {pricing.baseFare}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Distance ({pricing.distance.toFixed(1)} km)</span>
+                      <span>{t("common.currency")} {pricing.distanceCharge}</span>
+                    </div>
+                    {pricing.subtotal < pricing.minimumFare && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Minimum fare applied</span>
+                        <span>{t("common.currency")} {pricing.minimumFare}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Payment Option */}
+                  <div className="border-t border-border/50 pt-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <CreditCard className="w-3 h-3" />
+                        <span>Card payment</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">{t("common.currency")} {pricing.customerPaysCard}</div>
+                        <div className="text-muted-foreground">+ {t("common.currency")} {pricing.processingFee} fee</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Distance Info */}
+                  <div className="flex gap-4 text-xs text-muted-foreground pt-1">
+                    <div className="flex items-center gap-1">
+                      <Navigation className="w-3 h-3" /> {pricing.distance.toFixed(1)} km
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> 15 min
+              </Card>
+            ) : (
+              <Card className="p-4 bg-secondary/20 border-border/50">
+                <div className="text-center text-sm text-muted-foreground">
+                  {pickupCoords && dropoffCoords 
+                    ? "Calculating price..." 
+                    : "Enter pickup and dropoff locations to see price"}
                 </div>
-                <div className="flex items-center gap-1">
-                  <CreditCard className="w-3 h-3" /> Cash
-                </div>
-              </div>
-            </Card>
+              </Card>
+            )}
           </div>
         </div>
 
