@@ -46,6 +46,19 @@ export default function Booking() {
   // Pricing breakdown
   const [pricing, setPricing] = useState<PricingBreakdown | null>(null);
 
+  // Check Google Maps API key status on mount
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (apiKey) {
+      console.log('✅ Google Maps API Key is configured');
+      console.log('📍 API Key length:', apiKey.length);
+    } else {
+      console.error('❌ Google Maps API Key is NOT configured!');
+      console.error('⚠️ Distance calculations will be inaccurate (using straight-line distance)');
+      console.error('⚠️ To fix: Add VITE_GOOGLE_MAPS_API_KEY to Railway environment variables');
+    }
+  }, []);
+
   // Get user's current location on mount - always try to get location when page opens
   useEffect(() => {
     // Always try to get current location when booking page opens

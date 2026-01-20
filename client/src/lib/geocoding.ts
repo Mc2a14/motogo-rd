@@ -129,7 +129,37 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
 }
 
 /**
+ * Get approximate location using IP-based geolocation (fallback)
+ * @returns Promise with lat/lng
+ */
+async function getLocationByIP(): Promise<{ lat: number; lng: number }> {
+  try {
+    // Use a free IP geolocation service
+    const response = await fetch('https://ipapi.co/json/');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.latitude && data.longitude) {
+        console.log('✅ Location obtained (IP-based):', {
+          lat: data.latitude,
+          lng: data.longitude,
+          city: data.city,
+          country: data.country_name
+        });
+        return {
+          lat: data.latitude,
+          lng: data.longitude,
+        };
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ IP-based location failed:', error);
+  }
+  throw new Error('IP-based location unavailable');
+}
+
+/**
  * Get user's current location using browser geolocation API
+ * Falls back to IP-based location if browser geolocation fails
  * @returns Promise with lat/lng
  */
 export function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
@@ -201,7 +231,17 @@ export function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
               message: error.message
             });
             
-            reject(new Error(message));
+            // If browser geolocation fails, try IP-based location as last resort
+            console.log('🔄 Trying IP-based location as fallback...');
+            getLocationByIP()
+              .then((coords) => {
+                console.log('✅ IP-based location successful');
+                resolve(coords);
+              })
+              .catch(() => {
+                // If IP-based also fails, reject with original error
+                reject(new Error(message));
+              });
           },
           {
             enableHighAccuracy: false, // Try network-based location
