@@ -184,7 +184,6 @@ export default function Booking() {
 
     try {
       const order = await createOrder.mutateAsync({
-        customerId: user.id as string,
         type: type as any,
         pickupAddress: pickupAddr,
         pickupLat: pickupCoords.lat,
@@ -192,8 +191,8 @@ export default function Booking() {
         dropoffAddress: dropoffAddr,
         dropoffLat: dropoffCoords.lat,
         dropoffLng: dropoffCoords.lng,
-        price: pricing.basePrice, // Store base price (what customer pays for cash)
-        description: notes,
+        price: Math.round(pricing.basePrice), // Ensure price is integer
+        description: notes || undefined,
       });
       
       toast({ title: "Order Created!", description: "Searching for a driver..." });
@@ -398,7 +397,7 @@ export default function Booking() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Distance ({pricing.distance.toFixed(1)} km)</span>
-                      <span>{t("common.currency")} {pricing.distanceCharge}</span>
+                      <span>{t("common.currency")} {pricing.distanceCharge.toFixed(2)}</span>
                     </div>
                     {pricing.subtotal < pricing.minimumFare && (
                       <div className="flex justify-between text-muted-foreground">
