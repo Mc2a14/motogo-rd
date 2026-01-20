@@ -63,40 +63,67 @@ export async function calculateDistance(
     const destinations = `${lat2},${lng2}`;
     const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origins}&destinations=${destinations}&units=metric&key=${apiKey}`;
     
+    console.log('[Distance Calculation] 🚀 Calling Google Maps Distance Matrix API...');
+    console.log('[Distance Calculation] 📍 Origins:', origins);
+    console.log('[Distance Calculation] 📍 Destinations:', destinations);
+    
     const response = await fetch(url);
 
     if (response.ok) {
       const data = await response.json();
-      console.log('[Distance Calculation] Google Maps API response:', data);
+      console.log('[Distance Calculation] 📦 Google Maps API full response:', JSON.stringify(data, null, 2));
       
       if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
         // Distance is in meters, convert to km
         const distanceMeters = data.rows[0].elements[0].distance.value;
         const distanceKm = distanceMeters / 1000;
         const roundedDistance = Math.round(distanceKm * 100) / 100;
-        console.log('✅ Google Maps API success:', {
-          distanceMeters,
-          distanceKm: roundedDistance,
-          route: data.rows[0].elements[0]
+        const duration = data.rows[0].elements[0].duration?.text || 'unknown';
+        
+        console.log('✅✅✅ Google Maps Distance Matrix API SUCCESS ✅✅✅');
+        console.log('📍 Road Distance:', {
+          meters: distanceMeters,
+          kilometers: roundedDistance,
+          duration: duration,
+          status: data.rows[0].elements[0].status
         });
+        console.log('📍 Full route element:', data.rows[0].elements[0]);
+        
         return roundedDistance;
       } else {
-        console.error('❌ Google Maps API returned error:', {
-          status: data.status,
-          error_message: data.error_message,
-          rows: data.rows
-        });
+        const elementStatus = data.rows?.[0]?.elements?.[0]?.status;
+        const errorMessage = data.error_message || 'Unknown error';
+        console.error('❌❌❌ Google Maps API returned error status ❌❌❌');
+        console.error('API Status:', data.status);
+        console.error('Element Status:', elementStatus);
+        console.error('Error Message:', errorMessage);
+        console.error('Full response:', JSON.stringify(data, null, 2));
+        
+        // Check if it's a specific error we can handle
+        if (elementStatus === 'ZERO_RESULTS') {
+          console.warn('⚠️ No route found between points, using Haversine fallback');
+        } else if (elementStatus === 'NOT_FOUND') {
+          console.warn('⚠️ Origin or destination not found, using Haversine fallback');
+        }
       }
     } else {
       const errorText = await response.text();
-      console.error('❌ Google Maps API HTTP error:', response.status, errorText);
+      console.error('❌❌❌ Google Maps API HTTP error ❌❌❌');
+      console.error('HTTP Status:', response.status);
+      console.error('Error Response:', errorText);
     }
   } catch (error) {
-    console.error('❌ Google Maps API failed, using Haversine fallback:', error);
+    console.error('❌❌❌ Google Maps API request failed ❌❌❌');
+    console.error('Error details:', error);
   }
 
   // Fallback to Haversine formula (straight-line distance)
-  return calculateHaversineDistance(lat1, lng1, lat2, lng2);
+  const haversineDistance = calculateHaversineDistance(lat1, lng1, lat2, lng2);
+  console.warn('⚠️⚠️⚠️ FALLING BACK TO HAVERSINE (STRAIGHT-LINE) DISTANCE ⚠️⚠️⚠️');
+  console.warn('⚠️ This is NOT accurate for road distance!');
+  console.warn('⚠️ Haversine distance:', haversineDistance, 'km');
+  console.warn('⚠️ Road distance would be longer. Check API key and Distance Matrix API enablement.');
+  return haversineDistance;
 }
 
 /**
