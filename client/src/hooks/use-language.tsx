@@ -88,6 +88,7 @@ const translations: Translations = {
   "rating.thank_you_desc": { en: "Your rating has been submitted", es: "Tu calificación ha sido enviada" },
   "rating.rated": { en: "Rated", es: "Calificado" },
   "rating.trip_finished": { en: "Trip Finished", es: "Viaje Completado" },
+  "rating.your_rating": { en: "Your Rating", es: "Tu Calificación" },
 };
 
 interface LanguageContextType {

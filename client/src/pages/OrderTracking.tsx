@@ -186,10 +186,56 @@ export default function OrderTracking() {
           </div>
 
           {order.status === 'completed' && (
-             <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 p-4 rounded-xl flex items-center justify-center gap-2">
-               <CheckCircle className="w-5 h-5" />
-               <span className="font-bold">Trip Finished</span>
-             </div>
+            <div className="space-y-4">
+              <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 p-4 rounded-xl flex items-center justify-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-bold">Trip Finished</span>
+              </div>
+              
+              {/* Rating Section */}
+              {order.customerId === user?.id && order.driverId && (
+                <Card className="p-4 border-border/50">
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-sm">{t("rating.your_rating")}</h4>
+                    {rating ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-5 h-5 ${
+                                  star <= rating.rating
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-muted-foreground"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {rating.rating}/5
+                          </span>
+                        </div>
+                        {rating.comment && (
+                          <p className="text-sm text-muted-foreground italic border-l-2 border-border pl-3">
+                            "{rating.comment}"
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2"
+                        onClick={() => setShowRatingDialog(true)}
+                      >
+                        <Star className="w-4 h-4" />
+                        {t("rating.rate_driver")}
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              )}
+            </div>
           )}
 
           {canCancel && (
