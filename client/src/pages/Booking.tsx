@@ -108,8 +108,9 @@ export default function Booking() {
           setPickupAddr(result.address);
         })
         .catch((error) => {
-          console.error('Geocoding error:', error);
+          console.error('Geocoding error for pickup:', error);
           // Don't update coordinates if geocoding fails
+          // User can use map selection or current location button instead
         })
         .finally(() => {
           setIsGeocodingPickup(false);
@@ -117,7 +118,7 @@ export default function Booking() {
     }, 1000); // Wait 1 second after user stops typing
 
     return () => clearTimeout(timeoutId);
-  }, [pickupAddr]);
+  }, [pickupAddr, initialAddress]);
 
   // Geocode dropoff address when it changes (debounced)
   useEffect(() => {

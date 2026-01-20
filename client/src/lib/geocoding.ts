@@ -8,6 +8,7 @@ export interface GeocodeResult {
 
 /**
  * Geocode an address to coordinates using OpenStreetMap Nominatim
+ * Falls back to Google Maps Geocoding API if available and Nominatim fails
  * @param address - The address to geocode
  * @returns Promise with lat/lng and formatted address
  */
@@ -16,34 +17,83 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
     throw new Error("Address cannot be empty");
   }
 
-  // Use Nominatim API (free, no API key needed)
-  // Add Dominican Republic context for better results
-  const searchQuery = encodeURIComponent(`${address}, Dominican Republic`);
-  const url = `https://nominatim.openstreetmap.org/search?q=${searchQuery}&format=json&limit=1&addressdetails=1`;
-
+  // Try Nominatim first (free, no API key needed)
   try {
-    const response = await fetch(url, {
+    // Try with full address first
+    let searchQuery = encodeURIComponent(`${address}, Dominican Republic`);
+    let url = `https://nominatim.openstreetmap.org/search?q=${searchQuery}&format=json&limit=3&addressdetails=1`;
+    
+    let response = await fetch(url, {
       headers: {
         'User-Agent': 'MotoGo/1.0', // Required by Nominatim
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`Geocoding failed: ${response.statusText}`);
+    if (response.ok) {
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        // Find best match (prefer exact matches)
+        const result = data[0];
+        console.log('✅ Nominatim geocoding success:', result.display_name);
+        return {
+          lat: parseFloat(result.lat),
+          lng: parseFloat(result.lon),
+          address: result.display_name || address,
+        };
+      }
     }
 
-    const data = await response.json();
+    // If no results, try without "Dominican Republic" suffix (sometimes helps)
+    if (address.includes('Dominican Republic')) {
+      const addressWithoutDR = address.replace(/,?\s*Dominican Republic/gi, '').trim();
+      searchQuery = encodeURIComponent(`${addressWithoutDR}, Dominican Republic`);
+      url = `https://nominatim.openstreetmap.org/search?q=${searchQuery}&format=json&limit=3&addressdetails=1`;
+      
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'MotoGo/1.0',
+        },
+      });
 
-    if (!data || data.length === 0) {
-      throw new Error(`Address not found: ${address}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.length > 0) {
+          const result = data[0];
+          console.log('✅ Nominatim geocoding success (retry):', result.display_name);
+          return {
+            lat: parseFloat(result.lat),
+            lng: parseFloat(result.lon),
+            address: result.display_name || address,
+          };
+        }
+      }
     }
 
-    const result = data[0];
-    return {
-      lat: parseFloat(result.lat),
-      lng: parseFloat(result.lon),
-      address: result.display_name || address,
-    };
+    // Try Google Maps Geocoding API as fallback if API key is available
+    const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (googleApiKey) {
+      console.log('🔄 Trying Google Maps Geocoding API as fallback...');
+      const googleUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=do&key=${googleApiKey}`;
+      
+      const googleResponse = await fetch(googleUrl);
+      if (googleResponse.ok) {
+        const googleData = await googleResponse.json();
+        if (googleData.status === 'OK' && googleData.results && googleData.results.length > 0) {
+          const result = googleData.results[0];
+          const location = result.geometry.location;
+          console.log('✅ Google Maps geocoding success:', result.formatted_address);
+          return {
+            lat: location.lat,
+            lng: location.lng,
+            address: result.formatted_address || address,
+          };
+        }
+      }
+    }
+
+    // If all else fails, throw error
+    throw new Error(`Address not found: ${address}`);
   } catch (error) {
     console.error('Geocoding error:', error);
     throw error;
