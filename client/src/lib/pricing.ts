@@ -29,8 +29,8 @@ export interface PricingBreakdown {
 }
 
 /**
- * Calculate road distance between two coordinates using OSRM API
- * Falls back to Haversine formula if API fails
+ * Calculate road distance between two coordinates using Google Maps Distance Matrix API
+ * Falls back to Haversine formula if API fails or key is not configured
  * @param lat1 Latitude of first point
  * @param lng1 Longitude of first point
  * @param lat2 Latitude of second point
@@ -43,28 +43,36 @@ export async function calculateDistance(
   lat2: number,
   lng2: number
 ): Promise<number> {
+  // Get Google Maps API key from environment variable
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  
+  if (!apiKey) {
+    console.warn('Google Maps API key not configured, using Haversine fallback');
+    return calculateHaversineDistance(lat1, lng1, lat2, lng2);
+  }
+
   try {
-    // Use OSRM (Open Source Routing Machine) - free, no API key required
-    // Format: [longitude, latitude] for OSRM
-    const url = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?overview=false&alternatives=false`;
+    // Use Google Maps Distance Matrix API for accurate road distance
+    // Format: latitude,longitude
+    const origins = `${lat1},${lng1}`;
+    const destinations = `${lat2},${lng2}`;
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origins}&destinations=${destinations}&units=metric&key=${apiKey}`;
     
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+    const response = await fetch(url);
 
     if (response.ok) {
       const data = await response.json();
-      if (data.routes && data.routes[0]?.distance) {
+      if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
         // Distance is in meters, convert to km
-        const distanceMeters = data.routes[0].distance;
+        const distanceMeters = data.rows[0].elements[0].distance.value;
         const distanceKm = distanceMeters / 1000;
         return Math.round(distanceKm * 100) / 100; // Round to 2 decimal places
+      } else {
+        console.warn('Google Maps API returned error:', data.status, data.error_message);
       }
     }
   } catch (error) {
-    console.warn('OSRM API failed, using Haversine fallback:', error);
+    console.warn('Google Maps API failed, using Haversine fallback:', error);
   }
 
   // Fallback to Haversine formula (straight-line distance)
