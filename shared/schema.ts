@@ -22,7 +22,7 @@ export const orders = pgTable("orders", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, status: true, driverId: true });
+export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, status: true, driverId: true, customerId: true });
 
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
