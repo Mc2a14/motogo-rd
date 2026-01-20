@@ -2,8 +2,8 @@
  * Pricing calculation utilities for MotoGo RD
  * 
  * Pricing Structure:
- * - Base Fare: RD$40
- * - Distance Rate: RD$10/km
+ * - Base Fare: RD$30
+ * - Distance Rate: RD$12/km
  * - Minimum Fare: RD$50
  * - Platform Commission: 15% (Driver gets 85%)
  * - Card Processing Fee: 3% (customer pays, separate)
@@ -87,8 +87,8 @@ export function calculatePricing(
   dropoffLng: number
 ): PricingBreakdown {
   // Constants
-  const BASE_FARE = 40;
-  const DISTANCE_RATE = 10; // per km
+  const BASE_FARE = 30;
+  const DISTANCE_RATE = 12; // per km
   const MINIMUM_FARE = 50;
   const DRIVER_PERCENTAGE = 0.85; // 85%
   const PLATFORM_PERCENTAGE = 0.15; // 15%
