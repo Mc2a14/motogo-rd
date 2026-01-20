@@ -57,60 +57,41 @@ export async function calculateDistance(
   }
 
   try {
-    // Use Google Maps Distance Matrix API for accurate road distance
-    // Format: latitude,longitude
-    const origins = `${lat1},${lng1}`;
-    const destinations = `${lat2},${lng2}`;
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origins}&destinations=${destinations}&units=metric&key=${apiKey}`;
+    // Call our backend endpoint to avoid CORS issues
+    // Backend will proxy the request to Google Maps Distance Matrix API
+    const url = `/api/distance?lat1=${lat1}&lng1=${lng1}&lat2=${lat2}&lng2=${lng2}`;
     
-    console.log('[Distance Calculation] 🚀 Calling Google Maps Distance Matrix API...');
-    console.log('[Distance Calculation] 📍 Origins:', origins);
-    console.log('[Distance Calculation] 📍 Destinations:', destinations);
+    console.log('[Distance Calculation] 🚀 Calling backend distance API...');
+    console.log('[Distance Calculation] 📍 Origins:', `${lat1},${lng1}`);
+    console.log('[Distance Calculation] 📍 Destinations:', `${lat2},${lng2}`);
     
     const response = await fetch(url);
 
     if (response.ok) {
       const data = await response.json();
-      console.log('[Distance Calculation] 📦 Google Maps API full response:', JSON.stringify(data, null, 2));
+      console.log('[Distance Calculation] 📦 Backend API response:', data);
       
-      if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
-        // Distance is in meters, convert to km
-        const distanceMeters = data.rows[0].elements[0].distance.value;
-        const distanceKm = distanceMeters / 1000;
-        const roundedDistance = Math.round(distanceKm * 100) / 100;
-        const duration = data.rows[0].elements[0].duration?.text || 'unknown';
+      if (data.status === 'OK' && data.distance) {
+        const roundedDistance = data.distance;
+        const duration = data.duration || 'unknown';
         
-        console.log('✅✅✅ Google Maps Distance Matrix API SUCCESS ✅✅✅');
+        console.log('✅✅✅ Google Maps Distance Matrix API SUCCESS (via backend) ✅✅✅');
         console.log('📍 Road Distance:', {
-          meters: distanceMeters,
           kilometers: roundedDistance,
-          duration: duration,
-          status: data.rows[0].elements[0].status
+          meters: data.distanceMeters,
+          duration: duration
         });
-        console.log('📍 Full route element:', data.rows[0].elements[0]);
         
         return roundedDistance;
       } else {
-        const elementStatus = data.rows?.[0]?.elements?.[0]?.status;
-        const errorMessage = data.error_message || 'Unknown error';
-        console.error('❌❌❌ Google Maps API returned error status ❌❌❌');
-        console.error('API Status:', data.status);
-        console.error('Element Status:', elementStatus);
-        console.error('Error Message:', errorMessage);
-        console.error('Full response:', JSON.stringify(data, null, 2));
-        
-        // Check if it's a specific error we can handle
-        if (elementStatus === 'ZERO_RESULTS') {
-          console.warn('⚠️ No route found between points, using Haversine fallback');
-        } else if (elementStatus === 'NOT_FOUND') {
-          console.warn('⚠️ Origin or destination not found, using Haversine fallback');
-        }
+        console.error('❌❌❌ Backend API returned error ❌❌❌');
+        console.error('Error:', data.error || data.message);
       }
     } else {
-      const errorText = await response.text();
-      console.error('❌❌❌ Google Maps API HTTP error ❌❌❌');
+      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+      console.error('❌❌❌ Backend API HTTP error ❌❌❌');
       console.error('HTTP Status:', response.status);
-      console.error('Error Response:', errorText);
+      console.error('Error Response:', errorData);
     }
   } catch (error) {
     console.error('❌❌❌ Google Maps API request failed ❌❌❌');

@@ -284,6 +284,55 @@ export async function registerRoutes(
     }
   });
 
+  // Google Maps Distance Matrix API proxy (to avoid CORS issues)
+  app.get("/api/distance", async (req, res) => {
+    try {
+      const { lat1, lng1, lat2, lng2 } = req.query;
+      
+      if (!lat1 || !lng1 || !lat2 || !lng2) {
+        return res.status(400).json({ message: "Missing required parameters: lat1, lng1, lat2, lng2" });
+      }
+
+      const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "Google Maps API key not configured" });
+      }
+
+      const origins = `${lat1},${lng1}`;
+      const destinations = `${lat2},${lng2}`;
+      const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origins}&destinations=${destinations}&units=metric&key=${apiKey}`;
+      
+      console.log('[Backend] Calling Google Maps Distance Matrix API:', { origins, destinations });
+      
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
+        const distanceMeters = data.rows[0].elements[0].distance.value;
+        const distanceKm = distanceMeters / 1000;
+        const roundedDistance = Math.round(distanceKm * 100) / 100;
+        
+        console.log('[Backend] ✅ Distance calculated:', roundedDistance, 'km');
+        
+        res.json({
+          distance: roundedDistance,
+          distanceMeters: distanceMeters,
+          duration: data.rows[0].elements[0].duration?.text,
+          status: 'OK'
+        });
+      } else {
+        console.error('[Backend] ❌ Google Maps API error:', data);
+        res.status(500).json({
+          message: 'Distance calculation failed',
+          error: data.error_message || data.rows?.[0]?.elements?.[0]?.status
+        });
+      }
+    } catch (error) {
+      console.error('[Backend] ❌ Distance calculation error:', error);
+      res.status(500).json({ message: "Internal server error", error: String(error) });
+    }
+  });
+
   // Seed Data (non-blocking - don't crash if it fails)
   seedDatabase().catch((err) => {
     console.error("Failed to seed database:", err.message);
