@@ -164,12 +164,18 @@ async function getLocationByGoogle(): Promise<{ lat: number; lng: number }> {
           accuracyMeters: accuracy
         });
         
-        // If accuracy is worse than 5km, it's too inaccurate to use
-        // This prevents using IP-based or very inaccurate WiFi-based locations
-        if (accuracy > 5000) {
+        // If accuracy is worse than 50km, it's too inaccurate to use
+        // This prevents using IP-based locations but allows WiFi-based locations
+        // 50km is reasonable for city-level accuracy
+        if (accuracy > 50000) {
           console.warn('⚠️ Google Geolocation accuracy too low:', `${accuracyKm.toFixed(1)}km`);
           console.warn('⚠️ Rejecting inaccurate location - please use map selection or manual entry');
           throw new Error(`Location accuracy too low (${accuracyKm.toFixed(1)}km). Please select your location on the map or enter it manually.`);
+        }
+        
+        // Warn if accuracy is moderate but still acceptable
+        if (accuracy > 10000) {
+          console.warn('⚠️ Google Geolocation accuracy is moderate:', `${accuracyKm.toFixed(1)}km - using anyway`);
         }
         
         console.log('✅ Location obtained (Google Geolocation API):', {
