@@ -145,13 +145,22 @@ export default function Booking() {
   // Calculate pricing when coordinates are available
   useEffect(() => {
     if (pickupCoords && dropoffCoords) {
-      const breakdown = calculatePricing(
+      // Set pricing to null while calculating
+      setPricing(null);
+      
+      calculatePricing(
         pickupCoords.lat,
         pickupCoords.lng,
         dropoffCoords.lat,
         dropoffCoords.lng
-      );
-      setPricing(breakdown);
+      )
+        .then((breakdown) => {
+          setPricing(breakdown);
+        })
+        .catch((error) => {
+          console.error('Error calculating pricing:', error);
+          // Keep pricing as null on error
+        });
     } else {
       setPricing(null);
     }
