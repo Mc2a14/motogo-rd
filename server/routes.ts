@@ -59,7 +59,9 @@ export async function registerRoutes(
 
   app.post(api.orders.create.path, isAuthenticated, async (req, res) => {
     try {
+      console.log('[Order Creation] Request body:', req.body);
       const input = api.orders.create.input.parse(req.body);
+      console.log('[Order Creation] Parsed input:', input);
       // @ts-ignore
       const userId = req.user!.id;
       // Don't auto-assign driver - let drivers accept orders manually
@@ -68,8 +70,11 @@ export async function registerRoutes(
       res.status(201).json(order);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        res.status(400).json({ message: err.errors[0].message });
+        console.error('[Order Creation] Validation error:', err.errors);
+        const errorMessage = err.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+        res.status(400).json({ message: errorMessage || "Validation error", errors: err.errors });
       } else {
+        console.error('[Order Creation] Server error:', err);
         res.status(500).json({ message: "Internal server error" });
       }
     }
