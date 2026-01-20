@@ -43,6 +43,10 @@ export default function Booking() {
   // Map selection mode: 'pickup', 'dropoff', or null
   const [selectionMode, setSelectionMode] = useState<'pickup' | 'dropoff' | null>(null);
   
+  // Track if address was set from map/location (don't auto-geocode these)
+  const [pickupAddrSource, setPickupAddrSource] = useState<'manual' | 'map' | 'location' | 'initial'>('initial');
+  const [dropoffAddrSource, setDropoffAddrSource] = useState<'manual' | 'map'>('manual');
+  
   // Pricing breakdown
   const [pricing, setPricing] = useState<PricingBreakdown | null>(null);
 
@@ -149,16 +153,25 @@ export default function Booking() {
     }
   }, []);
 
-  // Geocode pickup address when it changes (debounced)
+  // Geocode pickup address when it changes (debounced) - ONLY if manually typed
   useEffect(() => {
-    if (!pickupAddr || pickupAddr === initialAddress) return;
+    // Don't geocode if:
+    // - Address is empty or same as initial
+    // - Address was set from map or location button (not manual typing)
+    // - User is in selection mode
+    if (!pickupAddr || pickupAddr === initialAddress || pickupAddrSource !== 'manual' || selectionMode === 'pickup') {
+      return;
+    }
     
     const timeoutId = setTimeout(() => {
       setIsGeocodingPickup(true);
       geocodeAddress(pickupAddr)
         .then((result) => {
           setPickupCoords({ lat: result.lat, lng: result.lng });
-          setPickupAddr(result.address);
+          // Only update address if it's different (to avoid overwriting user's typing)
+          if (result.address.toLowerCase() !== pickupAddr.toLowerCase()) {
+            setPickupAddr(result.address);
+          }
         })
         .catch((error) => {
           console.error('Geocoding error for pickup:', error);
@@ -168,33 +181,42 @@ export default function Booking() {
         .finally(() => {
           setIsGeocodingPickup(false);
         });
-    }, 1000); // Wait 1 second after user stops typing
+    }, 2000); // Wait 2 seconds after user stops typing (longer to avoid interrupting)
 
     return () => clearTimeout(timeoutId);
-  }, [pickupAddr, initialAddress]);
+  }, [pickupAddr, initialAddress, pickupAddrSource, selectionMode]);
 
-  // Geocode dropoff address when it changes (debounced)
+  // Geocode dropoff address when it changes (debounced) - ONLY if manually typed
   useEffect(() => {
-    if (!dropoffAddr) return;
+    // Don't geocode if:
+    // - Address is empty
+    // - Address was set from map (not manual typing)
+    // - User is in selection mode
+    if (!dropoffAddr || dropoffAddrSource !== 'manual' || selectionMode === 'dropoff') {
+      return;
+    }
     
     const timeoutId = setTimeout(() => {
       setIsGeocodingDropoff(true);
       geocodeAddress(dropoffAddr)
         .then((result) => {
           setDropoffCoords({ lat: result.lat, lng: result.lng });
-          setDropoffAddr(result.address);
+          // Only update address if it's different
+          if (result.address.toLowerCase() !== dropoffAddr.toLowerCase()) {
+            setDropoffAddr(result.address);
+          }
         })
         .catch((error) => {
-          console.error('Geocoding error:', error);
+          console.error('Geocoding error for dropoff:', error);
           // Don't update coordinates if geocoding fails
         })
         .finally(() => {
           setIsGeocodingDropoff(false);
         });
-    }, 1000); // Wait 1 second after user stops typing
+    }, 2000); // Wait 2 seconds after user stops typing
 
     return () => clearTimeout(timeoutId);
-  }, [dropoffAddr]);
+  }, [dropoffAddr, dropoffAddrSource, selectionMode]);
 
   // Calculate pricing when coordinates are available
   useEffect(() => {
@@ -280,25 +302,51 @@ export default function Booking() {
           interactive={true}
           onMapClick={async (coords) => {
             if (selectionMode === 'pickup') {
+              // Set coordinates first to ensure they're saved
               setPickupCoords(coords);
+              setPickupAddrSource('map'); // Mark as from map selection
               setIsGeocodingPickup(true);
               try {
                 const address = await reverseGeocode(coords.lat, coords.lng);
                 setPickupAddr(address);
+                toast({
+                  title: "Location Selected",
+                  description: `Pickup location set: ${address}`,
+                  variant: "default",
+                });
               } catch (error) {
-                setPickupAddr(`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`);
+                const coordString = `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
+                setPickupAddr(coordString);
+                toast({
+                  title: "Location Selected",
+                  description: `Pickup location set to coordinates: ${coordString}`,
+                  variant: "default",
+                });
               } finally {
                 setIsGeocodingPickup(false);
                 setSelectionMode(null);
               }
             } else if (selectionMode === 'dropoff') {
+              // Set coordinates first to ensure they're saved
               setDropoffCoords(coords);
+              setDropoffAddrSource('map'); // Mark as from map selection
               setIsGeocodingDropoff(true);
               try {
                 const address = await reverseGeocode(coords.lat, coords.lng);
                 setDropoffAddr(address);
+                toast({
+                  title: "Location Selected",
+                  description: `Destination set: ${address}`,
+                  variant: "default",
+                });
               } catch (error) {
-                setDropoffAddr(`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`);
+                const coordString = `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
+                setDropoffAddr(coordString);
+                toast({
+                  title: "Location Selected",
+                  description: `Destination set to coordinates: ${coordString}`,
+                  variant: "default",
+                });
               } finally {
                 setIsGeocodingDropoff(false);
                 setSelectionMode(null);
@@ -358,7 +406,10 @@ export default function Booking() {
                   <div className="relative">
                     <Input 
                       value={pickupAddr} 
-                      onChange={(e) => setPickupAddr(e.target.value)}
+                      onChange={(e) => {
+                        setPickupAddr(e.target.value);
+                        setPickupAddrSource('manual'); // Mark as manually typed
+                      }}
                       placeholder={isLoadingLocation ? "Getting your location..." : "Enter pickup location"}
                       className="bg-secondary/30 pr-10"
                       disabled={isLoadingLocation || selectionMode === 'pickup'}
@@ -381,6 +432,7 @@ export default function Booking() {
                             })
                             .then((address) => {
                               setPickupAddr(address);
+                              setPickupAddrSource('location'); // Mark as from location button
                               toast({
                                 title: "Location Found!",
                                 description: `Your location: ${address}`,
@@ -428,13 +480,16 @@ export default function Booking() {
                     </Button>
                   </div>
                   <div className="relative">
-                    <Input 
-                      value={dropoffAddr} 
-                      onChange={(e) => setDropoffAddr(e.target.value)}
-                      placeholder="Enter destination"
-                      className="bg-secondary/30 pr-10"
-                      disabled={selectionMode === 'dropoff'}
-                    />
+                      <Input 
+                        value={dropoffAddr} 
+                        onChange={(e) => {
+                          setDropoffAddr(e.target.value);
+                          setDropoffAddrSource('manual'); // Mark as manually typed
+                        }}
+                        placeholder="Enter destination"
+                        className="bg-secondary/30 pr-10"
+                        disabled={selectionMode === 'dropoff'}
+                      />
                     {isGeocodingDropoff && (
                       <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
                     )}
