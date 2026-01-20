@@ -41,6 +41,10 @@ export function useCreateOrder() {
     mutationFn: async (data: CreateOrderRequest) => {
       // Validation handled by backend/zod, but we ensure correct types here
       const res = await apiRequest("POST", api.orders.create.path, data);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(errorData.message || "Failed to create order");
+      }
       return api.orders.create.responses[201].parse(await res.json());
     },
     onSuccess: () => {

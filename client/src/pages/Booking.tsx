@@ -197,8 +197,14 @@ export default function Booking() {
       
       toast({ title: "Order Created!", description: "Searching for a driver..." });
       setLocation(`/track/${order.id}`);
-    } catch (error) {
-      toast({ title: "Error", description: "Could not create order.", variant: "destructive" });
+    } catch (error: any) {
+      console.error("Order creation error:", error);
+      const errorMessage = error?.message || "Could not create order.";
+      toast({ 
+        title: "Error", 
+        description: errorMessage, 
+        variant: "destructive" 
+      });
     }
   };
 
