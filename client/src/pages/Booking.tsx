@@ -84,9 +84,17 @@ export default function Booking() {
           // Show user-friendly message about location
           if (error.message.includes('permission')) {
             toast({
-              title: "Location Access Needed",
-              description: "Please enable location access in your browser settings to automatically detect your location.",
+              title: "Location Permission Required",
+              description: "Click the location button (📍) to allow location access. Your browser will ask for permission.",
               variant: "default",
+              duration: 5000,
+            });
+          } else if (error.message.includes('unavailable')) {
+            toast({
+              title: "Location Unavailable",
+              description: "Unable to detect your location. Please click the location button (📍) or enter your address manually.",
+              variant: "default",
+              duration: 5000,
             });
           }
           

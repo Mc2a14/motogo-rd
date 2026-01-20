@@ -129,32 +129,52 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
 }
 
 /**
- * Get approximate location using IP-based geolocation (fallback)
+ * Get location using Google Geolocation API (uses WiFi/cell tower data - much more accurate than IP)
  * @returns Promise with lat/lng
  */
-async function getLocationByIP(): Promise<{ lat: number; lng: number }> {
+async function getLocationByGoogle(): Promise<{ lat: number; lng: number }> {
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error('Google Maps API key not configured');
+  }
+
   try {
-    // Use a free IP geolocation service
-    const response = await fetch('https://ipapi.co/json/');
+    // Google Geolocation API uses WiFi access points and cell towers for accurate location
+    // This is much better than IP-based location
+    const response = await fetch(`https://www.googleapis.com/geolocation/v1/geolocate?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        considerIp: true, // Fallback to IP if WiFi/cell data unavailable
+      }),
+    });
+
     if (response.ok) {
       const data = await response.json();
-      if (data.latitude && data.longitude) {
-        console.log('✅ Location obtained (IP-based):', {
-          lat: data.latitude,
-          lng: data.longitude,
-          city: data.city,
-          country: data.country_name
+      if (data.location && data.location.lat && data.location.lng) {
+        console.log('✅ Location obtained (Google Geolocation API):', {
+          lat: data.location.lat,
+          lng: data.location.lng,
+          accuracy: data.accuracy ? `${data.accuracy}m` : 'unknown'
         });
         return {
-          lat: data.latitude,
-          lng: data.longitude,
+          lat: data.location.lat,
+          lng: data.location.lng,
         };
       }
+    } else {
+      const errorData = await response.json();
+      console.error('❌ Google Geolocation API error:', errorData);
+      throw new Error(errorData.error?.message || 'Google Geolocation API failed');
     }
   } catch (error) {
-    console.warn('⚠️ IP-based location failed:', error);
+    console.warn('⚠️ Google Geolocation API failed:', error);
+    throw error;
   }
-  throw new Error('IP-based location unavailable');
+  
+  throw new Error('Google Geolocation API unavailable');
 }
 
 /**
@@ -231,15 +251,18 @@ export function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
               message: error.message
             });
             
-            // If browser geolocation fails, try IP-based location as last resort
-            console.log('🔄 Trying IP-based location as fallback...');
-            getLocationByIP()
+            // If browser geolocation fails, try Google Geolocation API as fallback
+            // This uses WiFi access points and cell towers - much more accurate than IP
+            console.log('🔄 Trying Google Geolocation API as fallback...');
+            getLocationByGoogle()
               .then((coords) => {
-                console.log('✅ IP-based location successful');
+                console.log('✅ Google Geolocation API successful');
                 resolve(coords);
               })
-              .catch(() => {
-                // If IP-based also fails, reject with original error
+              .catch((googleError) => {
+                console.warn('⚠️ Google Geolocation API also failed:', googleError);
+                // If Google Geolocation also fails, reject with original browser error
+                // This gives user clear message about enabling location
                 reject(new Error(message));
               });
           },
