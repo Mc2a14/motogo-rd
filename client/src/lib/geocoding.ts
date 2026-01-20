@@ -139,6 +139,7 @@ export function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
       return;
     }
 
+    // Try with high accuracy first (GPS)
     navigator.geolocation.getCurrentPosition(
       (position) => {
         resolve({
@@ -147,27 +148,42 @@ export function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
         });
       },
       (error) => {
-        // Completely silent error handling - no console logs, no error messages
-        // Location access is optional and failures are expected/common
-        let message = 'Unable to get your location';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            message = 'Location permission denied';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            message = 'Location information unavailable';
-            break;
-          case error.TIMEOUT:
-            message = 'Location request timed out';
-            break;
-        }
-        // No console logging - completely silent
-        reject(new Error(message));
+        // If high accuracy fails, try with lower accuracy (network-based)
+        // This is more likely to work in some environments
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            });
+          },
+          (error) => {
+            // If both attempts fail, reject
+            let message = 'Unable to get your location';
+            switch (error.code) {
+              case error.PERMISSION_DENIED:
+                message = 'Location permission denied';
+                break;
+              case error.POSITION_UNAVAILABLE:
+                message = 'Location information unavailable';
+                break;
+              case error.TIMEOUT:
+                message = 'Location request timed out';
+                break;
+            }
+            reject(new Error(message));
+          },
+          {
+            enableHighAccuracy: false, // Try network-based location
+            timeout: 15000, // Longer timeout for network location
+            maximumAge: 300000, // Accept location up to 5 minutes old
+          }
+        );
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
+        enableHighAccuracy: true, // Try GPS first
+        timeout: 15000, // 15 second timeout
+        maximumAge: 0, // Always get fresh location
       }
     );
   });

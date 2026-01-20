@@ -46,9 +46,11 @@ export default function Booking() {
   // Pricing breakdown
   const [pricing, setPricing] = useState<PricingBreakdown | null>(null);
 
-  // Get user's current location on mount
+  // Get user's current location on mount - always try to get location when page opens
   useEffect(() => {
-    if (!pickupCoords && !pickupAddr) {
+    // Always try to get current location when booking page opens
+    // If there's an initialAddress from URL, we'll still try location first, then fall back to it
+    if (!pickupCoords) {
       setIsLoadingLocation(true);
       getCurrentLocation()
         .then((coords) => {
@@ -64,10 +66,25 @@ export default function Booking() {
             });
         })
         .catch(() => {
-          // Completely silent fallback - no errors, no toasts, no console logs
-          // Location access is optional and failures are expected/common
-          setPickupCoords(INITIAL_CENTER);
-          setPickupAddr("Santo Domingo, Dominican Republic");
+          // If location fails and we have initialAddress from URL, use that
+          if (initialAddress) {
+            setPickupAddr(initialAddress);
+            // Geocode the initial address
+            geocodeAddress(initialAddress)
+              .then((result) => {
+                setPickupCoords({ lat: result.lat, lng: result.lng });
+                setPickupAddr(result.address);
+              })
+              .catch(() => {
+                // Final fallback to default location
+                setPickupCoords(INITIAL_CENTER);
+                setPickupAddr("Santo Domingo, Dominican Republic");
+              });
+          } else {
+            // No initial address, use default location
+            setPickupCoords(INITIAL_CENTER);
+            setPickupAddr("Santo Domingo, Dominican Republic");
+          }
         })
         .finally(() => {
           setIsLoadingLocation(false);
