@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { useTheme } from "@/hooks/use-theme";
 import { useDrivers } from "@/hooks/use-orders";
@@ -67,6 +67,22 @@ function FitBounds({ pickup, dropoff }: { pickup?: { lat: number; lng: number } 
   return null;
 }
 
+// Component to handle map click events
+function MapClickHandler({ onMapClick, selectionMode }: { onMapClick?: (coords: { lat: number; lng: number }) => void; selectionMode?: 'pickup' | 'dropoff' | null }) {
+  useMapEvents({
+    click: (e) => {
+      if (onMapClick && selectionMode) {
+        onMapClick({
+          lat: e.latlng.lat,
+          lng: e.latlng.lng,
+        });
+      }
+    },
+  });
+
+  return null;
+}
+
 interface MapProps {
   className?: string;
   pickup?: { lat: number; lng: number } | null;
@@ -74,6 +90,8 @@ interface MapProps {
   showDrivers?: boolean;
   onCenterChange?: (center: { lat: number; lng: number }) => void;
   interactive?: boolean;
+  onMapClick?: (coords: { lat: number; lng: number }) => void;
+  selectionMode?: 'pickup' | 'dropoff' | null;
 }
 
 export default function Map({ 
@@ -82,7 +100,9 @@ export default function Map({
   dropoff, 
   showDrivers = true,
   onCenterChange,
-  interactive = true
+  interactive = true,
+  onMapClick,
+  selectionMode = null
 }: MapProps) {
   const { theme } = useTheme();
   const { data: drivers } = useDrivers();
@@ -128,6 +148,7 @@ export default function Map({
         <TileLayer url={tileUrl} attribution={attribution} />
         <MapController />
         <FitBounds pickup={pickup} dropoff={dropoff} />
+        <MapClickHandler onMapClick={onMapClick} selectionMode={selectionMode} />
 
                {/* Pickup Marker */}
                {pickup && pickup.lat && pickup.lng && (
@@ -168,8 +189,22 @@ export default function Map({
         )}
       </MapContainer>
       
+      {/* Selection Mode Indicator */}
+      {selectionMode && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[400] pointer-events-none">
+          <div className="relative">
+            <div className={`w-6 h-6 rounded-full border-4 border-white dark:border-black shadow-lg ${
+              selectionMode === 'pickup' ? 'bg-blue-500' : 'bg-accent'
+            }`}></div>
+            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-black/90 text-white text-xs px-3 py-1.5 rounded whitespace-nowrap font-semibold">
+              {selectionMode === 'pickup' ? 'Click to set pickup' : 'Click to set dropoff'}
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Center Indicator for "Drag to set pickup" UX */}
-      {!pickup && interactive && onCenterChange && (
+      {!pickup && interactive && onCenterChange && !selectionMode && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[400] pointer-events-none">
           <div className="relative">
             <div className="w-4 h-4 bg-black dark:bg-white rounded-full border-2 border-white dark:border-black shadow-lg"></div>

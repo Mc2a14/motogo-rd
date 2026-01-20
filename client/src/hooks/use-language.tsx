@@ -42,6 +42,10 @@ const translations: Translations = {
   "booking.confirm": { en: "Confirm Order", es: "Confirmar Orden" },
   "booking.details": { en: "Details (Optional)", es: "Detalles (Opcional)" },
   "booking.creating": { en: "Creating order...", es: "Creando orden..." },
+  "booking.select_on_map": { en: "Select on Map", es: "Seleccionar en Mapa" },
+  "booking.cancel": { en: "Cancel", es: "Cancelar" },
+  "booking.click_to_set_pickup": { en: "Click to set pickup", es: "Haz clic para establecer punto de partida" },
+  "booking.click_to_set_dropoff": { en: "Click to set dropoff", es: "Haz clic para establecer destino" },
   
   // Status
   "status.pending": { en: "Finding driver...", es: "Buscando conductor..." },

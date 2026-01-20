@@ -38,6 +38,9 @@ export default function Booking() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isGeocodingPickup, setIsGeocodingPickup] = useState(false);
   const [isGeocodingDropoff, setIsGeocodingDropoff] = useState(false);
+  
+  // Map selection mode: 'pickup', 'dropoff', or null
+  const [selectionMode, setSelectionMode] = useState<'pickup' | 'dropoff' | null>(null);
 
   // Get user's current location on mount
   useEffect(() => {
@@ -185,6 +188,34 @@ export default function Booking() {
           pickup={pickupCoords} 
           dropoff={dropoffCoords}
           interactive={true}
+          onMapClick={async (coords) => {
+            if (selectionMode === 'pickup') {
+              setPickupCoords(coords);
+              setIsGeocodingPickup(true);
+              try {
+                const address = await reverseGeocode(coords.lat, coords.lng);
+                setPickupAddr(address);
+              } catch (error) {
+                setPickupAddr(`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`);
+              } finally {
+                setIsGeocodingPickup(false);
+                setSelectionMode(null);
+              }
+            } else if (selectionMode === 'dropoff') {
+              setDropoffCoords(coords);
+              setIsGeocodingDropoff(true);
+              try {
+                const address = await reverseGeocode(coords.lat, coords.lng);
+                setDropoffAddr(address);
+              } catch (error) {
+                setDropoffAddr(`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`);
+              } finally {
+                setIsGeocodingDropoff(false);
+                setSelectionMode(null);
+              }
+            }
+          }}
+          selectionMode={selectionMode}
         />
         {/* Mobile Back Button */}
         <Button 
@@ -220,19 +251,32 @@ export default function Booking() {
               <div className="flex gap-3">
                 <div className="mt-3 w-4 h-4 rounded-full bg-blue-500 ring-4 ring-blue-500/20 shrink-0" />
                 <div className="flex-1 space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">{t("booking.pickup")}</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase">{t("booking.pickup")}</label>
+                    <Button
+                      type="button"
+                      variant={selectionMode === 'pickup' ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-6 text-xs px-2"
+                      onClick={() => {
+                        setSelectionMode(selectionMode === 'pickup' ? null : 'pickup');
+                      }}
+                    >
+                      {selectionMode === 'pickup' ? t("booking.cancel") : t("booking.select_on_map")}
+                    </Button>
+                  </div>
                   <div className="relative">
                     <Input 
                       value={pickupAddr} 
                       onChange={(e) => setPickupAddr(e.target.value)}
                       placeholder={isLoadingLocation ? "Getting your location..." : "Enter pickup location"}
                       className="bg-secondary/30 pr-10"
-                      disabled={isLoadingLocation}
+                      disabled={isLoadingLocation || selectionMode === 'pickup'}
                     />
                     {(isLoadingLocation || isGeocodingPickup) && (
                       <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
                     )}
-                    {!isLoadingLocation && !isGeocodingPickup && (
+                    {!isLoadingLocation && !isGeocodingPickup && selectionMode !== 'pickup' && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -271,13 +315,27 @@ export default function Booking() {
               <div className="flex gap-3">
                 <div className="mt-3 w-4 h-4 rounded-full bg-accent ring-4 ring-accent/20 shrink-0" />
                 <div className="flex-1 space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">{t("booking.dropoff")}</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase">{t("booking.dropoff")}</label>
+                    <Button
+                      type="button"
+                      variant={selectionMode === 'dropoff' ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-6 text-xs px-2"
+                      onClick={() => {
+                        setSelectionMode(selectionMode === 'dropoff' ? null : 'dropoff');
+                      }}
+                    >
+                      {selectionMode === 'dropoff' ? t("booking.cancel") : t("booking.select_on_map")}
+                    </Button>
+                  </div>
                   <div className="relative">
                     <Input 
                       value={dropoffAddr} 
                       onChange={(e) => setDropoffAddr(e.target.value)}
                       placeholder="Enter destination"
                       className="bg-secondary/30 pr-10"
+                      disabled={selectionMode === 'dropoff'}
                     />
                     {isGeocodingDropoff && (
                       <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
