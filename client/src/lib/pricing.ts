@@ -46,8 +46,13 @@ export async function calculateDistance(
   // Get Google Maps API key from environment variable
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   
+  // Debug logging
+  console.log('[Distance Calculation] API Key present:', !!apiKey);
+  console.log('[Distance Calculation] API Key length:', apiKey ? apiKey.length : 0);
+  
   if (!apiKey) {
-    console.warn('Google Maps API key not configured, using Haversine fallback');
+    console.warn('⚠️ Google Maps API key not configured, using Haversine fallback (straight-line distance)');
+    console.warn('⚠️ To fix: Add VITE_GOOGLE_MAPS_API_KEY to Railway environment variables');
     return calculateHaversineDistance(lat1, lng1, lat2, lng2);
   }
 
@@ -62,17 +67,32 @@ export async function calculateDistance(
 
     if (response.ok) {
       const data = await response.json();
+      console.log('[Distance Calculation] Google Maps API response:', data);
+      
       if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
         // Distance is in meters, convert to km
         const distanceMeters = data.rows[0].elements[0].distance.value;
         const distanceKm = distanceMeters / 1000;
-        return Math.round(distanceKm * 100) / 100; // Round to 2 decimal places
+        const roundedDistance = Math.round(distanceKm * 100) / 100;
+        console.log('✅ Google Maps API success:', {
+          distanceMeters,
+          distanceKm: roundedDistance,
+          route: data.rows[0].elements[0]
+        });
+        return roundedDistance;
       } else {
-        console.warn('Google Maps API returned error:', data.status, data.error_message);
+        console.error('❌ Google Maps API returned error:', {
+          status: data.status,
+          error_message: data.error_message,
+          rows: data.rows
+        });
       }
+    } else {
+      const errorText = await response.text();
+      console.error('❌ Google Maps API HTTP error:', response.status, errorText);
     }
   } catch (error) {
-    console.warn('Google Maps API failed, using Haversine fallback:', error);
+    console.error('❌ Google Maps API failed, using Haversine fallback:', error);
   }
 
   // Fallback to Haversine formula (straight-line distance)
