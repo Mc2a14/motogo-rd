@@ -374,18 +374,27 @@ export default function Booking() {
                             })
                             .then((address) => {
                               setPickupAddr(address);
+                              toast({
+                                title: "Location Found!",
+                                description: `Your location: ${address}`,
+                                variant: "default",
+                              });
                             })
-                            .catch(() => {
-                              // Silently fall back to default location - no error message
-                              // Location access is optional and may not be available
-                              setPickupCoords(INITIAL_CENTER);
-                              setPickupAddr("Santo Domingo, Dominican Republic");
+                            .catch((error) => {
+                              console.error('Location button error:', error);
+                              toast({
+                                title: "Location Not Available",
+                                description: "Please enter your address manually or select on the map.",
+                                variant: "destructive",
+                                duration: 5000,
+                              });
+                              // Don't set default location - let user enter manually
                             })
                             .finally(() => {
                               setIsLoadingLocation(false);
                             });
                         }}
-                        title="Use current location"
+                        title="Use current location (click to get your GPS location)"
                       >
                         <MapPin className="w-4 h-4" />
                       </Button>
