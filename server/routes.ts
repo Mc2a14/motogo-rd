@@ -66,7 +66,8 @@ export async function registerRoutes(
       const userId = req.user!.id;
       // Don't auto-assign driver - let drivers accept orders manually
       // This ensures orders are only shown to drivers when they're truly available
-      const order = await storage.createOrder({ ...input, customerId: userId, driverId: null });
+      // driverId is omitted from InsertOrder schema, so it defaults to null in DB
+      const order = await storage.createOrder({ ...input, customerId: userId });
       res.status(201).json(order);
     } catch (err) {
       if (err instanceof z.ZodError) {
